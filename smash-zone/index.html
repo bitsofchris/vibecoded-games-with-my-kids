@@ -54,7 +54,9 @@
   .up-card .pip.filled{background:#FFC312;border-color:#FFC312}
   .up-card .buy-btn{font-family:'Lilita One',cursive;font-size:.95rem;padding:8px 18px;border:none;border-radius:8px;background:linear-gradient(135deg,#2ED573,#1E90FF);color:white;cursor:pointer;transition:transform .1s,box-shadow .1s;box-shadow:0 3px 0 rgba(0,0,0,0.2)}
   .up-card .buy-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,0.2)}
-  .up-card .buy-btn.maxed{background:linear-gradient(135deg,#666,#888);cursor:default}
+  .up-card .buy-btn.maxed{background:linear-gradient(135deg,#666,#888);cursor:default;opacity:0.5}
+  .up-card .buy-btn.cant-afford{background:linear-gradient(135deg,#555,#444);cursor:default;opacity:0.4;color:rgba(255,255,255,0.5)}
+  .up-card.disabled-card{opacity:0.5}
   .up-card .buy-btn.shake{animation:btnShake .4s ease-in-out}
   @keyframes btnShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
   .up-next{font-family:'Lilita One',cursive;font-size:clamp(1.2rem,3vw,1.6rem);padding:14px 50px;border:none;border-radius:12px;background:linear-gradient(135deg,#FF4757,#FF6B2C);color:white;cursor:pointer;box-shadow:0 5px 0 #c0392b;transition:transform .12s;text-transform:uppercase;letter-spacing:2px}
@@ -286,6 +288,7 @@ let mouseX = W / 2, mouseY = H / 2;
 let mouseDown = false;
 let powerGlow = 0;
 let gameTime = 0;
+let ballActive = false; // ball stays still until user moves
 
 // ── WRECKING BALL (chain physics) ──
 let chainSegments = 12;
@@ -297,7 +300,8 @@ let anchorX, anchorY;
 function initChain() {
   chainSegments = getUpgradeValue('chainLen');
   ballRadius = getUpgradeValue('ballSize');
-  anchorX = W / 2; anchorY = 80;
+  anchorX = W * 0.15; anchorY = 80;
+  ballActive = false;
   chain = [];
   for (let i = 0; i <= chainSegments; i++) {
     const x = anchorX;
@@ -1090,23 +1094,24 @@ function renderUpgradeCards() {
     const level = upgradeLevels[key];
     const maxed = level >= up.tiers.length - 1;
     const cost = maxed ? 0 : up.costs[level];
+    const canAfford = !maxed && points >= cost;
 
     const card = document.createElement('div');
-    card.className = 'up-card';
+    card.className = 'up-card' + (maxed || !canAfford ? ' disabled-card' : '');
     card.innerHTML = `
       <div class="icon">${up.icon}</div>
       <div class="name">${up.name}</div>
-      <div class="tier">${maxed ? 'MAX' : 'LVL ' + level + '/' + (up.tiers.length - 1)}</div>
+      <div class="tier">${maxed ? '⭐ MAX' : 'LVL ' + level + '/' + (up.tiers.length - 1)}</div>
       <div class="pips">${Array.from({length: up.tiers.length - 1}, (_, i) =>
         `<div class="pip${i < level ? ' filled' : ''}"></div>`
       ).join('')}</div>
-      <button class="buy-btn${maxed ? ' maxed' : ''}" data-key="${key}" data-cost="${cost}">
-        ${maxed ? 'MAX' : '💰 ' + cost}
+      <button class="buy-btn${maxed ? ' maxed' : (!canAfford ? ' cant-afford' : '')}" data-key="${key}" data-cost="${cost}">
+        ${maxed ? '⭐ MAX' : '💰 ' + cost}
       </button>
     `;
     grid.appendChild(card);
 
-    if (!maxed) {
+    if (!maxed && canAfford) {
       const btn = card.querySelector('.buy-btn');
       btn.addEventListener('click', () => buyUpgrade(key));
       btn.addEventListener('touchstart', (e) => { e.preventDefault(); buyUpgrade(key); });
@@ -1519,8 +1524,10 @@ function loop(ts) {
   gameTime += dt;
 
   if (!gamePaused) {
-    updateChain();
-    ballBlockCollision();
+    if (ballActive) {
+      updateChain();
+      ballBlockCollision();
+    }
     updateBlocks();
     updateDebris();
     updateSplatters();
@@ -1544,10 +1551,10 @@ function loop(ts) {
 }
 
 // ── INPUT ──
-addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
-addEventListener('touchmove', e => { e.preventDefault(); mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY; }, { passive: false });
-addEventListener('touchstart', e => { mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY; mouseDown = true; });
-addEventListener('mousedown', () => mouseDown = true);
+addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; if (gameRunning && !gamePaused) ballActive = true; });
+addEventListener('touchmove', e => { e.preventDefault(); mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY; if (gameRunning && !gamePaused) ballActive = true; }, { passive: false });
+addEventListener('touchstart', e => { mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY; mouseDown = true; if (gameRunning && !gamePaused) ballActive = true; });
+addEventListener('mousedown', () => { mouseDown = true; if (gameRunning && !gamePaused) ballActive = true; });
 addEventListener('mouseup', () => mouseDown = false);
 addEventListener('touchend', () => mouseDown = false);
 

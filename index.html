@@ -98,6 +98,25 @@
     text-transform: uppercase;
   }
 
+  .name-sophia {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(1.1rem, 3vw, 1.5rem);
+    color: #FF69B4;
+    text-shadow: 0 0 10px rgba(255, 105, 180, 0.5), 0 0 20px rgba(255, 105, 180, 0.3);
+    letter-spacing: 2px;
+  }
+
+  .name-ethan {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(1.1rem, 3vw, 1.5rem);
+    background: linear-gradient(90deg, #FF0000, #FF8C00, #FFD700, #39FF14, #00F0FF, #BF40FF, #FF2D78);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 10px rgba(0, 240, 255, 0.4));
+    letter-spacing: 2px;
+  }
+
   /* ── GAME COUNT BAR ── */
   .stats-bar {
     display: flex;
@@ -309,7 +328,7 @@
   <div class="logo">
     <span class="logo-icon">🕹️</span><span class="arcade-text">ARCADE</span>
   </div>
-  <p class="tagline">Browser games created by Sophia and Ethan</p>
+  <p class="tagline">Browser games created by<br><span class="name-sophia">Sophia</span> & <span class="name-ethan">Ethan</span></p>
 
   <div class="stats-bar">
     <div class="stat">

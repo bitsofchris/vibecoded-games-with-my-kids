@@ -1,0 +1,678 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🐶 Puppy Catcher!</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&family=Lilita+One&family=Sniglet:wght@400;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --sky-top: #87CEEB;
+    --sky-bottom: #E0F4FF;
+    --grass: #5DBE4A;
+    --grass-dark: #4AA33B;
+    --wood: #C68B59;
+    --wood-dark: #A06F3C;
+    --pink: #FF8FAB;
+    --gold: #FFD700;
+    --heart: #FF4D6D;
+  }
+
+  body {
+    font-family: 'Sniglet', cursive;
+    overflow: hidden;
+    height: 100vh; width: 100vw;
+    user-select: none; -webkit-user-select: none;
+    cursor: none;
+  }
+
+  /* ── SPLASH ── */
+  #splash {
+    position: fixed; inset: 0; z-index: 1000;
+    background: linear-gradient(180deg, #FFE4EC 0%, #FFF0F5 40%, #E8F8E0 100%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    transition: opacity 0.7s, transform 0.7s;
+  }
+  #splash.hidden { opacity: 0; transform: scale(1.05); pointer-events: none; }
+
+  .splash-puppies {
+    font-size: clamp(4rem, 12vw, 8rem);
+    animation: puppyWiggle 1s ease-in-out infinite;
+    margin-bottom: 10px;
+    filter: drop-shadow(0 6px 12px rgba(0,0,0,0.1));
+  }
+  @keyframes puppyWiggle {
+    0%, 100% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+  }
+
+  .splash-title {
+    font-family: 'Lilita One', cursive;
+    font-size: clamp(3rem, 10vw, 7rem);
+    background: linear-gradient(135deg, #FF8FAB, #C77DFF, #FFD700);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    text-shadow: none;
+    filter: drop-shadow(3px 3px 0 rgba(0,0,0,0.08));
+    line-height: 1.1;
+  }
+  .splash-sub {
+    font-size: clamp(1rem, 3vw, 1.6rem);
+    color: #B07BAC;
+    margin: 8px 0 35px;
+  }
+  .start-btn {
+    font-family: 'Lilita One', cursive;
+    font-size: clamp(1.4rem, 4vw, 2.2rem);
+    padding: 16px 55px;
+    border: none; border-radius: 60px;
+    background: linear-gradient(135deg, #FF8FAB, #C77DFF);
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 7px 0 #A05BAF, 0 12px 30px rgba(0,0,0,0.15);
+    transition: transform 0.12s, box-shadow 0.12s;
+    animation: btnBounce 2s ease-in-out infinite;
+  }
+  .start-btn:hover { transform: translateY(-3px); box-shadow: 0 10px 0 #A05BAF, 0 16px 40px rgba(0,0,0,0.2); }
+  .start-btn:active { transform: translateY(4px); box-shadow: 0 3px 0 #A05BAF; }
+  @keyframes btnBounce { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-6px)} }
+
+  /* ── GAME CANVAS ── */
+  #game-canvas {
+    position: fixed; inset: 0;
+    width: 100%; height: 100%;
+  }
+
+  /* ── HUD ── */
+  #hud {
+    position: fixed; top: 12px; left: 50%; transform: translateX(-50%);
+    display: flex; gap: 20px; align-items: center;
+    z-index: 200;
+    background: rgba(255,255,255,0.9);
+    backdrop-filter: blur(8px);
+    padding: 8px 28px; border-radius: 50px;
+    box-shadow: 0 4px 16px rgba(0,0,0,0.1);
+  }
+  .hud-item {
+    display: flex; align-items: center; gap: 6px;
+    font-family: 'Lilita One', cursive;
+    font-size: clamp(0.95rem, 2.2vw, 1.5rem);
+  }
+  .hud-icon { font-size: 1.3em; }
+  #hud-score { color: #C77DFF; }
+  #hud-timer { color: #FF4D6D; }
+  #hud-lives { letter-spacing: 2px; }
+  #hud-saved { color: #5DBE4A; }
+
+  /* ── GAME OVER ── */
+  #game-over {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.55);
+    backdrop-filter: blur(5px);
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 500;
+  }
+  #game-over.show { display: flex; }
+
+  .go-card {
+    background: linear-gradient(180deg, #FFF5F8, #FFFFFF);
+    border-radius: 32px;
+    padding: 35px 50px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    animation: cardPop 0.5s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    max-width: 92vw;
+  }
+  @keyframes cardPop { from{transform:scale(0.5);opacity:0} to{transform:scale(1);opacity:1} }
+
+  .go-puppies { font-size: 4rem; margin-bottom: 5px; }
+  .go-title {
+    font-family: 'Lilita One', cursive;
+    font-size: clamp(2rem, 6vw, 3.5rem);
+    color: #C77DFF;
+  }
+  .go-score-line {
+    font-family: 'Lilita One', cursive;
+    font-size: clamp(2.5rem, 8vw, 5rem);
+    color: #FFB347;
+    margin: 5px 0;
+  }
+  .go-msg {
+    font-size: clamp(1rem, 2.5vw, 1.3rem);
+    color: #B07BAC;
+    margin-bottom: 10px;
+  }
+  .go-stats {
+    display: flex; gap: 28px; justify-content: center;
+    margin: 15px 0 25px; flex-wrap: wrap;
+  }
+  .go-stat-val {
+    font-family: 'Lilita One', cursive;
+    font-size: 1.8rem; color: #C77DFF;
+  }
+  .go-stat-label { font-size: 0.85rem; color: #C0A0C0; }
+  .play-again-btn {
+    font-family: 'Lilita One', cursive;
+    font-size: 1.5rem; padding: 14px 45px;
+    border: none; border-radius: 50px;
+    background: linear-gradient(135deg, #FF8FAB, #C77DFF);
+    color: white; cursor: pointer;
+    box-shadow: 0 5px 0 #A05BAF;
+    transition: transform 0.12s;
+  }
+  .play-again-btn:hover { transform: translateY(-2px); }
+  .play-again-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 #A05BAF; }
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="splash-puppies">🐶</div>
+  <div class="splash-title">Puppy Catcher!</div>
+  <div class="splash-sub">Move the basket to catch falling puppies! 🧺💕</div>
+  <button class="start-btn" onclick="startGame()">🐾 PLAY!</button>
+</div>
+
+<canvas id="game-canvas"></canvas>
+
+<div id="hud" style="display:none;">
+  <div class="hud-item"><span class="hud-icon">⭐</span> <span id="hud-score">0</span></div>
+  <div class="hud-item"><span class="hud-icon">⏱️</span> <span id="hud-timer">60</span></div>
+  <div class="hud-item"><span id="hud-lives">❤️❤️❤️</span></div>
+  <div class="hud-item"><span class="hud-icon">🐶</span> <span id="hud-saved">0</span></div>
+</div>
+
+<div id="game-over">
+  <div class="go-card">
+    <div class="go-puppies">🐶🐕🐩</div>
+    <div class="go-title" id="go-title">Great Job!</div>
+    <div class="go-score-line" id="go-score">0</div>
+    <div class="go-msg" id="go-msg">The puppies love you!</div>
+    <div class="go-stats">
+      <div class="go-stat"><div class="go-stat-val" id="stat-saved">0</div><div class="go-stat-label">Puppies Saved</div></div>
+      <div class="go-stat"><div class="go-stat-val" id="stat-best-streak">0</div><div class="go-stat-label">Best Streak</div></div>
+      <div class="go-stat"><div class="go-stat-val" id="stat-bones">0</div><div class="go-stat-label">Bones Caught</div></div>
+    </div>
+    <button class="play-again-btn" onclick="restartGame()">🐾 Play Again!</button>
+  </div>
+</div>
+
+<script>
+// ══════════════════════════════════════
+//  PUPPY CATCHER — The cutest game ever
+// ══════════════════════════════════════
+
+const canvas = document.getElementById('game-canvas');
+const c = canvas.getContext('2d');
+
+function resize() { canvas.width = window.innerWidth; canvas.height = window.innerHeight; }
+window.addEventListener('resize', resize);
+resize();
+
+// ── Audio ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let actx;
+function initAudio() { if(!actx) actx = new AudioCtx(); }
+
+function sfx(type) {
+  if(!actx) return;
+  const o = actx.createOscillator();
+  const g = actx.createGain();
+  o.connect(g).connect(actx.destination);
+  if(type==='catch') {
+    o.type='sine'; o.frequency.setValueAtTime(523,actx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(1047,actx.currentTime+0.1);
+    g.gain.setValueAtTime(0.2,actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,actx.currentTime+0.2);
+    o.start(); o.stop(actx.currentTime+0.2);
+  } else if(type==='bone') {
+    o.type='triangle'; o.frequency.setValueAtTime(880,actx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(1320,actx.currentTime+0.08);
+    g.gain.setValueAtTime(0.15,actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,actx.currentTime+0.15);
+    o.start(); o.stop(actx.currentTime+0.15);
+  } else if(type==='miss') {
+    o.type='sawtooth'; o.frequency.setValueAtTime(300,actx.currentTime);
+    o.frequency.exponentialRampToValueAtTime(100,actx.currentTime+0.3);
+    g.gain.setValueAtTime(0.12,actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,actx.currentTime+0.35);
+    o.start(); o.stop(actx.currentTime+0.35);
+  } else if(type==='woof') {
+    // Two-tone bark
+    o.type='square'; o.frequency.setValueAtTime(250,actx.currentTime);
+    o.frequency.setValueAtTime(180,actx.currentTime+0.06);
+    g.gain.setValueAtTime(0.08,actx.currentTime);
+    g.gain.exponentialRampToValueAtTime(0.001,actx.currentTime+0.12);
+    o.start(); o.stop(actx.currentTime+0.12);
+  }
+}
+
+// ── Puppies (emoji art!) ──
+const PUPPY_TYPES = [
+  { emoji: '🐶', name: 'puppy', points: 10 },
+  { emoji: '🐕', name: 'doggo', points: 15 },
+  { emoji: '🐩', name: 'poodle', points: 20 },
+  { emoji: '🦮', name: 'guide dog', points: 15 },
+  { emoji: '🐕‍🦺', name: 'service pup', points: 20 },
+];
+const BONE = { emoji: '🦴', name: 'bone', points: 25 };
+const HEART = { emoji: '💖', name: 'heart', points: 0 }; // extra life
+
+// ── State ──
+let score, lives, timeLeft, saved, streak, bestStreak, bonesCollected;
+let basketX, basketTargetX, basketW, basketH, basketY;
+let puppies, particles, floatingTexts;
+let gameRunning, lastTime, spawnAcc, spawnRate;
+let cloudX1, cloudX2, cloudX3;
+let grassWave;
+let mouseX = 0;
+
+// ── Game Objects ──
+function createPuppy() {
+  const W = canvas.width;
+  let type;
+  const r = Math.random();
+  if (r < 0.06) type = HEART;       // 6% extra life
+  else if (r < 0.18) type = BONE;   // 12% bone
+  else type = PUPPY_TYPES[Math.floor(Math.random() * PUPPY_TYPES.length)];
+
+  const size = 38 + Math.random() * 18;
+  return {
+    x: 40 + Math.random() * (W - 80),
+    y: -size,
+    size,
+    speed: 1.2 + Math.random() * 1.5 + Math.max(0, (60 - timeLeft) * 0.03),
+    wobblePhase: Math.random() * Math.PI * 2,
+    wobbleAmp: 15 + Math.random() * 20,
+    rotation: 0,
+    rotSpeed: (Math.random() - 0.5) * 2,
+    type,
+    caught: false,
+  };
+}
+
+function spawnParticles(x, y, emoji, count) {
+  for (let i = 0; i < count; i++) {
+    const angle = (i / count) * Math.PI * 2 + Math.random() * 0.5;
+    particles.push({
+      x, y,
+      vx: Math.cos(angle) * (2 + Math.random() * 3),
+      vy: Math.sin(angle) * (2 + Math.random() * 3) - 2,
+      life: 1,
+      emoji: emoji || '✨',
+      size: 14 + Math.random() * 10,
+    });
+  }
+}
+
+function addFloatingText(x, y, text, color) {
+  floatingTexts.push({ x, y, text, color, life: 1 });
+}
+
+// ── Draw helpers ──
+function drawSky() {
+  const grad = c.createLinearGradient(0, 0, 0, canvas.height);
+  grad.addColorStop(0, '#87CEEB');
+  grad.addColorStop(0.65, '#E0F4FF');
+  grad.addColorStop(0.85, '#C8E6C9');
+  grad.addColorStop(1, '#5DBE4A');
+  c.fillStyle = grad;
+  c.fillRect(0, 0, canvas.width, canvas.height);
+}
+
+function drawClouds(dt) {
+  c.font = `${Math.max(50, canvas.width * 0.05)}px serif`;
+  c.globalAlpha = 0.5;
+  cloudX1 = (cloudX1 + dt * 12) % (canvas.width + 200);
+  cloudX2 = (cloudX2 + dt * 8) % (canvas.width + 200);
+  cloudX3 = (cloudX3 + dt * 15) % (canvas.width + 200);
+  c.fillText('☁️', cloudX1 - 100, canvas.height * 0.12);
+  c.fillText('☁️', cloudX2 - 100, canvas.height * 0.22);
+  c.fillText('⛅', cloudX3 - 100, canvas.height * 0.07);
+  c.globalAlpha = 1;
+}
+
+function drawGrass() {
+  const W = canvas.width, H = canvas.height;
+  const grassTop = H * 0.88;
+  // Green hill
+  c.fillStyle = '#5DBE4A';
+  c.beginPath();
+  c.moveTo(0, grassTop);
+  for (let x = 0; x <= W; x += 30) {
+    c.lineTo(x, grassTop + Math.sin(x * 0.02 + grassWave) * 6);
+  }
+  c.lineTo(W, H); c.lineTo(0, H);
+  c.closePath(); c.fill();
+
+  // Darker bottom
+  c.fillStyle = '#4AA33B';
+  c.fillRect(0, H * 0.93, W, H * 0.07);
+
+  // Little flowers
+  c.font = '16px serif';
+  for (let i = 0; i < 12; i++) {
+    const fx = (i * W / 12 + 20) % W;
+    const fy = grassTop + 10 + Math.sin(fx * 0.05) * 4;
+    c.fillText(i % 3 === 0 ? '🌼' : i % 3 === 1 ? '🌸' : '🌻', fx, fy);
+  }
+}
+
+function drawBasket() {
+  const W = canvas.width, H = canvas.height;
+  basketW = Math.max(90, W * 0.12);
+  basketH = basketW * 0.55;
+  basketY = H * 0.82;
+
+  // Smooth movement
+  basketX += (basketTargetX - basketX) * 0.18;
+  const bx = basketX - basketW / 2;
+  const by = basketY;
+
+  // Shadow
+  c.fillStyle = 'rgba(0,0,0,0.08)';
+  c.beginPath();
+  c.ellipse(basketX, by + basketH + 4, basketW * 0.45, 6, 0, 0, Math.PI * 2);
+  c.fill();
+
+  // Basket body
+  const grad = c.createLinearGradient(bx, by, bx, by + basketH);
+  grad.addColorStop(0, '#DBA46A');
+  grad.addColorStop(0.5, '#C68B59');
+  grad.addColorStop(1, '#A06F3C');
+  c.fillStyle = grad;
+
+  // Rounded basket shape
+  c.beginPath();
+  c.moveTo(bx + 8, by);
+  c.lineTo(bx + basketW - 8, by);
+  c.quadraticCurveTo(bx + basketW + 4, by + basketH * 0.5, bx + basketW - 15, by + basketH);
+  c.lineTo(bx + 15, by + basketH);
+  c.quadraticCurveTo(bx - 4, by + basketH * 0.5, bx + 8, by);
+  c.closePath(); c.fill();
+
+  // Basket rim
+  c.fillStyle = '#DBA46A';
+  c.beginPath();
+  c.ellipse(basketX, by, basketW / 2, 10, 0, 0, Math.PI * 2);
+  c.fill();
+  c.strokeStyle = '#A06F3C'; c.lineWidth = 2;
+  c.stroke();
+
+  // Weave lines
+  c.strokeStyle = 'rgba(255,255,255,0.2)'; c.lineWidth = 1.5;
+  for (let i = 1; i < 4; i++) {
+    const ly = by + (basketH / 4) * i;
+    c.beginPath();
+    c.moveTo(bx + 12, ly);
+    c.lineTo(bx + basketW - 12, ly);
+    c.stroke();
+  }
+
+  // Cute face on basket
+  c.font = `${Math.max(16, basketW * 0.18)}px serif`;
+  c.textAlign = 'center';
+  c.fillText('😊', basketX, by + basketH * 0.65);
+}
+
+function drawPuppies() {
+  puppies.forEach(p => {
+    if (p.caught) return;
+    c.save();
+    c.translate(p.x, p.y);
+    c.rotate(p.rotation * Math.PI / 180);
+    c.font = `${p.size}px serif`;
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+
+    // Glow under puppy
+    if (p.type === HEART) {
+      c.shadowColor = '#FF4D6D';
+      c.shadowBlur = 20;
+    } else if (p.type === BONE) {
+      c.shadowColor = '#FFD700';
+      c.shadowBlur = 15;
+    }
+
+    c.fillText(p.type.emoji, 0, 0);
+    c.restore();
+  });
+}
+
+function drawParticles() {
+  particles.forEach(p => {
+    c.globalAlpha = p.life;
+    c.font = `${p.size * p.life}px serif`;
+    c.textAlign = 'center'; c.textBaseline = 'middle';
+    c.fillText(p.emoji, p.x, p.y);
+  });
+  c.globalAlpha = 1;
+}
+
+function drawFloatingTexts() {
+  floatingTexts.forEach(ft => {
+    c.globalAlpha = ft.life;
+    c.font = `bold ${24 + (1 - ft.life) * 10}px 'Lilita One', cursive`;
+    c.textAlign = 'center';
+    c.fillStyle = ft.color;
+    c.strokeStyle = 'white'; c.lineWidth = 3;
+    c.strokeText(ft.text, ft.x, ft.y);
+    c.fillText(ft.text, ft.x, ft.y);
+  });
+  c.globalAlpha = 1;
+}
+
+// ── Custom cursor (paw!) ──
+function drawCursor() {
+  c.font = '30px serif';
+  c.textAlign = 'center'; c.textBaseline = 'middle';
+  c.fillText('🐾', mouseX, canvas.height * 0.5 > basketY ? basketY - 20 : mouseX); // just show on top area
+}
+
+// ── Update ──
+function update(dt) {
+  grassWave += dt * 1.5;
+
+  // Spawn
+  spawnAcc += dt;
+  if (spawnAcc >= spawnRate) {
+    spawnAcc = 0;
+    puppies.push(createPuppy());
+    // Gradually increase difficulty
+    spawnRate = Math.max(0.4, 1.2 - (60 - timeLeft) * 0.012);
+  }
+
+  // Move puppies
+  puppies.forEach(p => {
+    if (p.caught) return;
+    p.y += p.speed * dt * 60;
+    p.x += Math.sin(p.wobblePhase + p.y * 0.02) * p.wobbleAmp * dt;
+    p.rotation += p.rotSpeed * dt * 60;
+
+    // Check catch
+    const dx = Math.abs(p.x - basketX);
+    const dy = p.y - basketY;
+    if (dx < basketW * 0.45 && dy > -10 && dy < basketH * 0.6) {
+      p.caught = true;
+      if (p.type === HEART) {
+        lives = Math.min(lives + 1, 5);
+        updateLivesDisplay();
+        spawnParticles(p.x, basketY, '💕', 8);
+        addFloatingText(p.x, basketY - 30, '+❤️', '#FF4D6D');
+        sfx('catch');
+      } else if (p.type === BONE) {
+        score += BONE.points;
+        bonesCollected++;
+        spawnParticles(p.x, basketY, '⭐', 6);
+        addFloatingText(p.x, basketY - 30, '+' + BONE.points, '#FFD700');
+        sfx('bone');
+      } else {
+        score += p.type.points * (1 + Math.floor(streak / 5));
+        saved++;
+        streak++;
+        if (streak > bestStreak) bestStreak = streak;
+        const bonus = streak >= 5 ? ' 🔥' : '';
+        spawnParticles(p.x, basketY, '🐾', 5);
+        addFloatingText(p.x, basketY - 30, '+' + p.type.points + bonus, '#C77DFF');
+        sfx('catch');
+        if (streak % 5 === 0) sfx('woof');
+      }
+      document.getElementById('hud-score').textContent = score;
+      document.getElementById('hud-saved').textContent = saved;
+    }
+
+    // Miss — fell off screen
+    if (p.y > canvas.height + 30 && !p.caught) {
+      p.caught = true; // mark as done
+      if (p.type !== BONE && p.type !== HEART) {
+        lives--;
+        streak = 0;
+        updateLivesDisplay();
+        sfx('miss');
+        // sad particles
+        spawnParticles(p.x, canvas.height * 0.88, '😢', 3);
+        if (lives <= 0) { endGame(); return; }
+      }
+    }
+  });
+
+  // Clean up caught puppies
+  puppies = puppies.filter(p => !p.caught || p.y <= canvas.height + 30);
+
+  // Particles
+  particles.forEach(p => {
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.1;
+    p.life -= dt * 2.2;
+  });
+  particles = particles.filter(p => p.life > 0);
+
+  // Floating texts
+  floatingTexts.forEach(ft => {
+    ft.y -= dt * 50;
+    ft.life -= dt * 1.5;
+  });
+  floatingTexts = floatingTexts.filter(ft => ft.life > 0);
+}
+
+function updateLivesDisplay() {
+  let s = '';
+  for (let i = 0; i < lives; i++) s += '❤️';
+  for (let i = lives; i < 3; i++) s += '🤍';
+  document.getElementById('hud-lives').innerHTML = s;
+}
+
+// ── Main Loop ──
+function gameLoop(timestamp) {
+  if (!gameRunning) return;
+  if (!lastTime) lastTime = timestamp;
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+
+  c.clearRect(0, 0, canvas.width, canvas.height);
+
+  drawSky();
+  drawClouds(dt);
+  drawGrass();
+  drawPuppies();
+  drawBasket();
+  drawParticles();
+  drawFloatingTexts();
+
+  update(dt);
+  requestAnimationFrame(gameLoop);
+}
+
+// ── Timer ──
+let timerInterval;
+function tickTimer() {
+  timeLeft--;
+  document.getElementById('hud-timer').textContent = timeLeft;
+  if (timeLeft <= 10) document.getElementById('hud-timer').style.color = '#FF4D6D';
+  if (timeLeft <= 0) endGame();
+}
+
+// ── Mouse / Touch ──
+function handleMove(x) {
+  mouseX = x;
+  basketTargetX = Math.max(basketW / 2, Math.min(canvas.width - basketW / 2, x));
+}
+window.addEventListener('mousemove', e => handleMove(e.clientX));
+window.addEventListener('touchmove', e => { e.preventDefault(); handleMove(e.touches[0].clientX); }, { passive: false });
+window.addEventListener('touchstart', e => handleMove(e.touches[0].clientX));
+
+// ── Start / End ──
+function startGame() {
+  initAudio();
+  document.getElementById('splash').classList.add('hidden');
+  setTimeout(() => document.getElementById('splash').style.display = 'none', 700);
+  document.getElementById('hud').style.display = 'flex';
+
+  score = 0; lives = 3; timeLeft = 60; saved = 0; streak = 0; bestStreak = 0; bonesCollected = 0;
+  basketX = canvas.width / 2; basketTargetX = canvas.width / 2;
+  puppies = []; particles = []; floatingTexts = [];
+  spawnAcc = 0; spawnRate = 1.2; lastTime = 0;
+  cloudX1 = 100; cloudX2 = canvas.width * 0.5; cloudX3 = canvas.width * 0.8;
+  grassWave = 0;
+  gameRunning = true;
+
+  document.getElementById('hud-score').textContent = '0';
+  document.getElementById('hud-timer').textContent = '60';
+  document.getElementById('hud-timer').style.color = '';
+  document.getElementById('hud-saved').textContent = '0';
+  updateLivesDisplay();
+
+  timerInterval = setInterval(tickTimer, 1000);
+  requestAnimationFrame(gameLoop);
+}
+
+function endGame() {
+  gameRunning = false;
+  clearInterval(timerInterval);
+
+  document.getElementById('go-score').textContent = score;
+  document.getElementById('stat-saved').textContent = saved;
+  document.getElementById('stat-best-streak').textContent = bestStreak;
+  document.getElementById('stat-bones').textContent = bonesCollected;
+
+  const titles = saved >= 30 ? 'Puppy Hero!! 🏆' : saved >= 20 ? 'Super Catcher! 🌟' : saved >= 10 ? 'Great Job! 🎉' : 'Nice Try! 💪';
+  const msgs = [
+    'The puppies are so happy!',
+    'Sofia & Ethan saved the day!',
+    'Every puppy found a home! 🏠',
+    'Woof woof! That means THANK YOU! 🐾',
+    'You\'re the best puppy catchers ever!',
+  ];
+  document.getElementById('go-title').textContent = titles;
+  document.getElementById('go-msg').textContent = msgs[Math.floor(Math.random() * msgs.length)];
+  document.getElementById('game-over').classList.add('show');
+}
+
+function restartGame() {
+  document.getElementById('game-over').classList.remove('show');
+  setTimeout(startGame, 300);
+}
+
+// ── Idle background animation on splash ──
+function splashBg() {
+  if (gameRunning) return;
+  c.clearRect(0, 0, canvas.width, canvas.height);
+  drawSky();
+  grassWave = (grassWave || 0) + 0.02;
+  cloudX1 = ((cloudX1 || 100) + 0.15) % (canvas.width + 200);
+  cloudX2 = ((cloudX2 || 400) + 0.1) % (canvas.width + 200);
+  cloudX3 = ((cloudX3 || 700) + 0.2) % (canvas.width + 200);
+  drawClouds(0.016);
+  drawGrass();
+  requestAnimationFrame(splashBg);
+}
+grassWave = 0; cloudX1 = 100; cloudX2 = canvas.width * 0.5; cloudX3 = canvas.width * 0.8;
+splashBg();
+</script>
+</body>
+</html>

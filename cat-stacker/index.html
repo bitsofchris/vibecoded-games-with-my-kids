@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Cat Stack Dash</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <!-- Title Screen -->
+        <div id="title-screen">
+            <h1 class="game-title">Sophia's Cat Stacker</h1>
+            
+            <div class="controls-panel">
+                <h2>How to Play</h2>
+                <div class="control-row">
+                    <div class="key-group">
+                        <span class="key">←</span>
+                        <span class="key">→</span>
+                    </div>
+                    <span class="control-desc">or</span>
+                    <div class="key-group">
+                        <span class="key">A</span>
+                        <span class="key">D</span>
+                    </div>
+                    <span class="control-desc">Switch lanes</span>
+                </div>
+                <div class="control-row">
+                    <div class="key-group">
+                        <span class="key wide">Click</span>
+                    </div>
+                    <span class="control-desc">Left/Right side of screen</span>
+                </div>
+                <div class="control-row">
+                    <div class="key-group">
+                        <span class="key wide">Swipe</span>
+                    </div>
+                    <span class="control-desc">Left/Right on touch screen</span>
+                </div>
+                <p class="goal-text">Collect yarn, avoid obstacles, build a bridge!</p>
+            </div>
+            
+            <div class="title-buttons">
+                <button id="start-btn">Start Game</button>
+                <button id="settings-btn">Settings</button>
+            </div>
+        </div>
+        
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="hidden">
+            <div class="settings-content">
+                <h2 class="settings-title">Game Settings</h2>
+                
+                <div class="setting-row">
+                    <label for="yarn-density">Yarn Density</label>
+                    <div class="slider-container">
+                        <span class="slider-min">1x</span>
+                        <input type="range" id="yarn-density" min="1" max="50" value="1.5" step="0.5">
+                        <span class="slider-max">50x</span>
+                    </div>
+                    <span class="slider-value" id="yarn-density-value">1.5x</span>
+                </div>
+                
+                <div class="setting-row">
+                    <label for="obstacle-density">Obstacle Density</label>
+                    <div class="slider-container">
+                        <span class="slider-min">0x</span>
+                        <input type="range" id="obstacle-density" min="0" max="3" value="2" step="0.25">
+                        <span class="slider-max">3x</span>
+                    </div>
+                    <span class="slider-value" id="obstacle-density-value">2x</span>
+                </div>
+                
+                <div class="setting-row">
+                    <label for="cat-speed">Cat Speed</label>
+                    <div class="slider-container">
+                        <span class="slider-min">0.5x</span>
+                        <input type="range" id="cat-speed" min="0.5" max="3" value="1" step="0.25">
+                        <span class="slider-max">3x</span>
+                    </div>
+                    <span class="slider-value" id="cat-speed-value">1x</span>
+                </div>
+                
+                <div class="setting-row">
+                    <label for="starting-level">Starting Level</label>
+                    <div class="slider-container">
+                        <span class="slider-min">1</span>
+                        <input type="range" id="starting-level" min="1" max="20" value="1" step="1">
+                        <span class="slider-max">20</span>
+                    </div>
+                    <span class="slider-value" id="starting-level-value">1</span>
+                </div>
+                
+                <button id="settings-close-btn">Done</button>
+            </div>
+        </div>
+        
+        <!-- UI Overlay -->
+        <div id="ui-overlay">
+            <div id="yarn-counter">Yarn: <span id="yarn-count">0</span></div>
+            <div id="distance-counter">Distance: <span id="distance-count">0</span></div>
+        </div>
+        
+        <!-- Message Display -->
+        <div id="message-display" class="hidden"></div>
+        
+        <!-- Level Screen -->
+        <div id="level-screen" class="hidden">
+            <div class="level-announce">
+                <span class="level-label">Level</span>
+                <span id="level-number" class="level-number">1</span>
+            </div>
+        </div>
+        
+        <!-- Fail Screen -->
+        <div id="fail-screen" class="hidden">
+            <h1 class="fail-title">Level Failed!</h1>
+            <p class="fail-level">Level 1</p>
+            <div class="fail-stats"></div>
+            <div class="end-buttons">
+                <button id="retry-btn">Try Again</button>
+                <button id="quit-fail-btn" class="quit-btn">Main Menu</button>
+            </div>
+        </div>
+        
+        <!-- Success Screen -->
+        <div id="success-screen" class="hidden">
+            <h1 class="success-title">Level Complete!</h1>
+            <p class="success-level">Level 1 Complete!</p>
+            <div class="end-buttons">
+                <button id="next-level-btn">Next Level</button>
+                <button id="quit-success-btn" class="quit-btn">Main Menu</button>
+            </div>
+        </div>
+        
+        <!-- End Screen -->
+        <div id="end-screen" class="hidden">
+            <h1>Game Over!</h1>
+            <div id="score-breakdown"></div>
+            <button id="restart-btn">Play Again</button>
+            <p class="hint">Press R to restart</p>
+        </div>
+    </div>
+    
+    <!-- Three.js -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    
+    <!-- Game Modules -->
+    <script type="module" src="js/main.js"></script>
+</body>
+</html>
+
+

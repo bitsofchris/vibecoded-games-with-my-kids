@@ -1,0 +1,626 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🎨 Color Splat!</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Bubblegum+Sans&family=Lilita+One&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --pop-red: #FF4757;
+    --pop-orange: #FF6B2C;
+    --pop-yellow: #FFC312;
+    --pop-green: #2ED573;
+    --pop-blue: #1E90FF;
+    --pop-purple: #A855F7;
+    --pop-pink: #FF6B9D;
+    --pop-cyan: #00D2D3;
+    --bg-light: #FFF9E6;
+    --bg-canvas: #FFFDF5;
+  }
+
+  body {
+    font-family: 'Bubblegum Sans', cursive;
+    background: var(--bg-light);
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+    cursor: crosshair;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  /* ── SPLASH SCREEN ── */
+  #splash-screen {
+    position: fixed; inset: 0;
+    background: linear-gradient(135deg, #FF6B9D 0%, #A855F7 30%, #1E90FF 60%, #2ED573 100%);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 1000;
+    transition: opacity 0.6s, transform 0.6s;
+  }
+  #splash-screen.hidden { opacity: 0; transform: scale(1.1); pointer-events: none; }
+
+  .splash-title {
+    font-family: 'Lilita One', cursive;
+    font-size: clamp(4rem, 12vw, 9rem);
+    color: white;
+    text-shadow: 4px 4px 0 rgba(0,0,0,0.15), 0 0 40px rgba(255,255,255,0.3);
+    animation: titleBounce 1.5s ease-in-out infinite;
+    letter-spacing: 2px;
+  }
+  .splash-sub {
+    font-size: clamp(1.2rem, 3vw, 2rem);
+    color: rgba(255,255,255,0.95);
+    margin: 10px 0 40px;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.1);
+  }
+  .start-btn {
+    font-family: 'Lilita One', cursive;
+    font-size: clamp(1.5rem, 4vw, 2.5rem);
+    padding: 18px 60px;
+    border: none;
+    border-radius: 60px;
+    background: white;
+    color: #A855F7;
+    cursor: pointer;
+    box-shadow: 0 8px 0 rgba(0,0,0,0.15), 0 12px 40px rgba(0,0,0,0.2);
+    transition: transform 0.15s, box-shadow 0.15s;
+    animation: btnPulse 2s ease-in-out infinite;
+  }
+  .start-btn:hover { transform: translateY(-3px); box-shadow: 0 11px 0 rgba(0,0,0,0.15), 0 16px 50px rgba(0,0,0,0.25); }
+  .start-btn:active { transform: translateY(4px); box-shadow: 0 4px 0 rgba(0,0,0,0.15); }
+
+  @keyframes titleBounce {
+    0%, 100% { transform: translateY(0) rotate(-1deg); }
+    50% { transform: translateY(-15px) rotate(1deg); }
+  }
+  @keyframes btnPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+  }
+
+  /* ── GAME AREA ── */
+  #game-area {
+    position: fixed; inset: 0;
+    overflow: hidden;
+  }
+
+  /* Paint canvas layer */
+  #paint-canvas {
+    position: absolute; inset: 0;
+    width: 100%; height: 100%;
+    z-index: 1;
+  }
+
+  /* ── HUD ── */
+  #hud {
+    position: fixed;
+    top: 16px; left: 50%;
+    transform: translateX(-50%);
+    display: flex; gap: 24px;
+    align-items: center;
+    z-index: 100;
+    background: rgba(255,255,255,0.92);
+    backdrop-filter: blur(10px);
+    padding: 10px 30px;
+    border-radius: 50px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+  }
+  .hud-item {
+    display: flex; align-items: center; gap: 8px;
+    font-family: 'Lilita One', cursive;
+    font-size: clamp(1rem, 2.5vw, 1.6rem);
+  }
+  .hud-icon { font-size: 1.4em; }
+  #score { color: var(--pop-purple); }
+  #timer { color: var(--pop-red); }
+  #combo-display {
+    color: var(--pop-orange);
+    transition: transform 0.15s;
+  }
+  #combo-display.bump { transform: scale(1.4); }
+
+  /* ── BUBBLES ── */
+  .bubble {
+    position: absolute;
+    border-radius: 50%;
+    cursor: pointer;
+    z-index: 50;
+    display: flex; align-items: center; justify-content: center;
+    transition: transform 0.08s;
+    animation: bubbleFloat 0.5s ease-out forwards;
+    will-change: transform;
+  }
+  .bubble::before {
+    content: '';
+    position: absolute;
+    width: 35%; height: 25%;
+    background: rgba(255,255,255,0.55);
+    border-radius: 50%;
+    top: 15%; left: 18%;
+    transform: rotate(-30deg);
+  }
+  .bubble:hover { transform: scale(1.12); }
+
+  @keyframes bubbleFloat {
+    from { transform: scale(0); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  /* ── SPLAT PARTICLES ── */
+  .splat-particle {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 60;
+    animation: splatFly 0.55s cubic-bezier(0.25, 0, 0.25, 1) forwards;
+  }
+  @keyframes splatFly {
+    0% { transform: translate(0, 0) scale(1); opacity: 1; }
+    100% { transform: translate(var(--tx), var(--ty)) scale(0); opacity: 0; }
+  }
+
+  /* ── SCORE POPUP ── */
+  .score-popup {
+    position: absolute;
+    font-family: 'Lilita One', cursive;
+    font-size: 2rem;
+    color: white;
+    text-shadow: 2px 2px 0 rgba(0,0,0,0.2);
+    pointer-events: none;
+    z-index: 70;
+    animation: popUp 0.7s ease-out forwards;
+  }
+  @keyframes popUp {
+    0% { transform: translateY(0) scale(0.5); opacity: 1; }
+    100% { transform: translateY(-80px) scale(1.3); opacity: 0; }
+  }
+
+  /* ── GAME OVER ── */
+  #game-over {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.65);
+    backdrop-filter: blur(6px);
+    display: none; flex-direction: column;
+    align-items: center; justify-content: center;
+    z-index: 500;
+  }
+  #game-over.show { display: flex; }
+
+  .go-card {
+    background: white;
+    border-radius: 32px;
+    padding: 40px 50px;
+    text-align: center;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    animation: cardPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    max-width: 90vw;
+  }
+  @keyframes cardPop {
+    from { transform: scale(0.5); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+  .go-title {
+    font-family: 'Lilita One', cursive;
+    font-size: clamp(2.5rem, 7vw, 4.5rem);
+    background: linear-gradient(135deg, var(--pop-pink), var(--pop-purple), var(--pop-blue));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  .go-score {
+    font-family: 'Lilita One', cursive;
+    font-size: clamp(3rem, 9vw, 6rem);
+    color: var(--pop-orange);
+    margin: 10px 0;
+  }
+  .go-msg {
+    font-size: clamp(1rem, 2.5vw, 1.5rem);
+    color: #666;
+    margin-bottom: 25px;
+  }
+  .go-stats {
+    display: flex; gap: 30px; justify-content: center;
+    margin-bottom: 30px;
+    flex-wrap: wrap;
+  }
+  .go-stat {
+    text-align: center;
+  }
+  .go-stat-val {
+    font-family: 'Lilita One', cursive;
+    font-size: 2rem;
+    color: var(--pop-purple);
+  }
+  .go-stat-label {
+    font-size: 0.95rem;
+    color: #999;
+  }
+  .play-again-btn {
+    font-family: 'Lilita One', cursive;
+    font-size: 1.6rem;
+    padding: 14px 50px;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(135deg, var(--pop-pink), var(--pop-purple));
+    color: white;
+    cursor: pointer;
+    box-shadow: 0 6px 0 rgba(0,0,0,0.15);
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+  .play-again-btn:hover { transform: translateY(-2px); }
+  .play-again-btn:active { transform: translateY(3px); box-shadow: 0 3px 0 rgba(0,0,0,0.15); }
+
+  /* ── BACKGROUND DECORATIONS ── */
+  .bg-blob {
+    position: fixed;
+    border-radius: 50%;
+    opacity: 0.08;
+    z-index: 0;
+    pointer-events: none;
+  }
+</style>
+</head>
+<body>
+
+<!-- SPLASH -->
+<div id="splash-screen">
+  <div class="splash-title">Color Splat!</div>
+  <div class="splash-sub">Pop the bubbles & paint the screen! 🫧</div>
+  <button class="start-btn" onclick="startGame()">▶ LET'S GO!</button>
+</div>
+
+<!-- GAME -->
+<div id="game-area">
+  <canvas id="paint-canvas"></canvas>
+
+  <div id="hud">
+    <div class="hud-item"><span class="hud-icon">⭐</span> <span id="score">0</span></div>
+    <div class="hud-item"><span class="hud-icon">⏱️</span> <span id="timer">45</span></div>
+    <div class="hud-item"><span class="hud-icon">🔥</span> <span id="combo-display">x1</span></div>
+  </div>
+</div>
+
+<!-- GAME OVER -->
+<div id="game-over">
+  <div class="go-card">
+    <div class="go-title">Masterpiece!</div>
+    <div class="go-score" id="final-score">0</div>
+    <div class="go-msg" id="final-msg">Amazing painting!</div>
+    <div class="go-stats">
+      <div class="go-stat"><div class="go-stat-val" id="stat-popped">0</div><div class="go-stat-label">Bubbles Popped</div></div>
+      <div class="go-stat"><div class="go-stat-val" id="stat-combo">0</div><div class="go-stat-label">Best Combo</div></div>
+      <div class="go-stat"><div class="go-stat-val" id="stat-colors">0</div><div class="go-stat-label">Colors Used</div></div>
+    </div>
+    <button class="play-again-btn" onclick="restartGame()">🎨 Paint Again!</button>
+  </div>
+</div>
+
+<!-- BG BLOBS -->
+<div class="bg-blob" style="width:300px;height:300px;background:var(--pop-pink);top:-50px;left:-80px;"></div>
+<div class="bg-blob" style="width:400px;height:400px;background:var(--pop-blue);bottom:-100px;right:-100px;"></div>
+<div class="bg-blob" style="width:250px;height:250px;background:var(--pop-yellow);top:40%;left:60%;"></div>
+
+<script>
+// ── AUDIO ENGINE ──
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+let audioCtx;
+function initAudio() { if (!audioCtx) audioCtx = new AudioCtx(); }
+
+function playPop(freq = 600) {
+  if (!audioCtx) return;
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+  osc.frequency.exponentialRampToValueAtTime(freq * 1.8, audioCtx.currentTime + 0.06);
+  osc.frequency.exponentialRampToValueAtTime(200, audioCtx.currentTime + 0.15);
+  gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+  osc.connect(gain).connect(audioCtx.destination);
+  osc.start(); osc.stop(audioCtx.currentTime + 0.2);
+}
+
+function playCombo() {
+  if (!audioCtx) return;
+  [500, 650, 800].forEach((f, i) => {
+    setTimeout(() => playPop(f), i * 60);
+  });
+}
+
+// ── COLORS ──
+const COLORS = [
+  { fill: '#FF4757', glow: 'rgba(255,71,87,0.4)' },
+  { fill: '#FF6B2C', glow: 'rgba(255,107,44,0.4)' },
+  { fill: '#FFC312', glow: 'rgba(255,195,18,0.4)' },
+  { fill: '#2ED573', glow: 'rgba(46,213,115,0.4)' },
+  { fill: '#1E90FF', glow: 'rgba(30,144,255,0.4)' },
+  { fill: '#A855F7', glow: 'rgba(168,85,247,0.4)' },
+  { fill: '#FF6B9D', glow: 'rgba(255,107,157,0.4)' },
+  { fill: '#00D2D3', glow: 'rgba(0,210,211,0.4)' },
+  { fill: '#F368E0', glow: 'rgba(243,104,224,0.4)' },
+  { fill: '#FF9F43', glow: 'rgba(255,159,67,0.4)' },
+];
+
+// ── GAME STATE ──
+let score = 0;
+let timeLeft = 45;
+let combo = 0;
+let bestCombo = 0;
+let popped = 0;
+let colorsUsed = new Set();
+let gameRunning = false;
+let bubbles = [];
+let spawnTimer, gameTimer;
+let lastPopTime = 0;
+
+// ── CANVAS ──
+const canvas = document.getElementById('paint-canvas');
+const ctx = canvas.getContext('2d');
+function resizeCanvas() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+// ── PAINT SPLAT ON CANVAS ──
+function paintSplat(x, y, color, size) {
+  const r = size * 0.8 + Math.random() * size * 0.6;
+  // Main splat
+  ctx.globalAlpha = 0.55 + Math.random() * 0.2;
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  // Irregular blob
+  const points = 8 + Math.floor(Math.random() * 5);
+  for (let i = 0; i < points; i++) {
+    const angle = (i / points) * Math.PI * 2;
+    const rad = r * (0.6 + Math.random() * 0.5);
+    const px = x + Math.cos(angle) * rad;
+    const py = y + Math.sin(angle) * rad;
+    if (i === 0) ctx.moveTo(px, py);
+    else {
+      const cpAngle = ((i - 0.5) / points) * Math.PI * 2;
+      const cpRad = r * (0.7 + Math.random() * 0.5);
+      ctx.quadraticCurveTo(
+        x + Math.cos(cpAngle) * cpRad,
+        y + Math.sin(cpAngle) * cpRad,
+        px, py
+      );
+    }
+  }
+  ctx.closePath();
+  ctx.fill();
+
+  // Small droplets
+  for (let i = 0; i < 4 + Math.floor(Math.random() * 4); i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const dist = r + Math.random() * r * 0.8;
+    const dr = 3 + Math.random() * 6;
+    ctx.globalAlpha = 0.4 + Math.random() * 0.3;
+    ctx.beginPath();
+    ctx.arc(x + Math.cos(angle) * dist, y + Math.sin(angle) * dist, dr, 0, Math.PI * 2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+// ── SPAWN BUBBLE ──
+function spawnBubble() {
+  if (!gameRunning) return;
+  const colorObj = COLORS[Math.floor(Math.random() * COLORS.length)];
+  const size = 55 + Math.floor(Math.random() * 45);
+  const margin = size;
+  const x = margin + Math.random() * (window.innerWidth - margin * 2);
+  const y = margin + 60 + Math.random() * (window.innerHeight - margin * 2 - 60);
+
+  const el = document.createElement('div');
+  el.className = 'bubble';
+  el.style.width = size + 'px';
+  el.style.height = size + 'px';
+  el.style.left = x - size/2 + 'px';
+  el.style.top = y - size/2 + 'px';
+  el.style.background = `radial-gradient(circle at 35% 35%, ${colorObj.fill}cc, ${colorObj.fill})`;
+  el.style.boxShadow = `0 4px 15px ${colorObj.glow}, inset 0 -3px 8px rgba(0,0,0,0.12)`;
+
+  const bubbleData = { el, x, y, size, color: colorObj.fill, born: Date.now(), lifetime: 2200 + Math.random() * 1500 };
+
+  el.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    popBubble(bubbleData);
+  });
+
+  document.getElementById('game-area').appendChild(el);
+  bubbles.push(bubbleData);
+
+  // Shrink and remove if not popped
+  setTimeout(() => {
+    if (bubbles.includes(bubbleData)) {
+      el.style.transition = 'transform 0.3s, opacity 0.3s';
+      el.style.transform = 'scale(0)';
+      el.style.opacity = '0';
+      setTimeout(() => {
+        el.remove();
+        bubbles = bubbles.filter(b => b !== bubbleData);
+        // Reset combo on miss
+        combo = 0;
+        updateCombo();
+      }, 300);
+    }
+  }, bubbleData.lifetime);
+}
+
+// ── POP BUBBLE ──
+function popBubble(b) {
+  if (!bubbles.includes(b)) return;
+  bubbles = bubbles.filter(bb => bb !== b);
+
+  const now = Date.now();
+  // Combo logic: if popped within 800ms of last pop
+  if (now - lastPopTime < 800) {
+    combo++;
+    if (combo > bestCombo) bestCombo = combo;
+  } else {
+    combo = 1;
+  }
+  lastPopTime = now;
+
+  const points = 10 * combo;
+  score += points;
+  popped++;
+  colorsUsed.add(b.color);
+
+  // Update HUD
+  document.getElementById('score').textContent = score;
+  updateCombo();
+
+  // Sound
+  const freq = 400 + combo * 80;
+  if (combo >= 3) playCombo(); else playPop(freq);
+
+  // Paint on canvas
+  paintSplat(b.x, b.y, b.color, b.size);
+
+  // Splat particles
+  for (let i = 0; i < 8; i++) {
+    const p = document.createElement('div');
+    p.className = 'splat-particle';
+    const angle = (i / 8) * Math.PI * 2 + Math.random() * 0.4;
+    const dist = 40 + Math.random() * 60;
+    const pSize = 6 + Math.random() * 12;
+    p.style.width = pSize + 'px';
+    p.style.height = pSize + 'px';
+    p.style.background = b.color;
+    p.style.left = b.x - pSize/2 + 'px';
+    p.style.top = b.y - pSize/2 + 'px';
+    p.style.setProperty('--tx', Math.cos(angle) * dist + 'px');
+    p.style.setProperty('--ty', Math.sin(angle) * dist + 'px');
+    document.getElementById('game-area').appendChild(p);
+    setTimeout(() => p.remove(), 600);
+  }
+
+  // Score popup
+  const popup = document.createElement('div');
+  popup.className = 'score-popup';
+  popup.textContent = '+' + points + (combo >= 3 ? ' 🔥' : '');
+  popup.style.left = b.x + 'px';
+  popup.style.top = b.y + 'px';
+  popup.style.color = b.color;
+  document.getElementById('game-area').appendChild(popup);
+  setTimeout(() => popup.remove(), 700);
+
+  // Remove bubble element
+  b.el.style.transition = 'none';
+  b.el.style.transform = 'scale(1.5)';
+  b.el.style.opacity = '0';
+  setTimeout(() => b.el.remove(), 100);
+}
+
+function updateCombo() {
+  const el = document.getElementById('combo-display');
+  el.textContent = 'x' + Math.max(combo, 1);
+  el.classList.remove('bump');
+  void el.offsetWidth;
+  el.classList.add('bump');
+  setTimeout(() => el.classList.remove('bump'), 200);
+}
+
+// ── GAME TIMER ──
+function tick() {
+  timeLeft--;
+  document.getElementById('timer').textContent = timeLeft;
+
+  if (timeLeft <= 10) {
+    document.getElementById('timer').style.color = '#FF4757';
+    document.getElementById('timer').style.animation = 'none';
+  }
+
+  // Speed up spawns as time runs out
+  if (timeLeft === 30) { clearInterval(spawnTimer); spawnTimer = setInterval(spawnBubble, 550); }
+  if (timeLeft === 15) { clearInterval(spawnTimer); spawnTimer = setInterval(spawnBubble, 380); }
+  if (timeLeft === 8) { clearInterval(spawnTimer); spawnTimer = setInterval(spawnBubble, 250); }
+
+  if (timeLeft <= 0) {
+    endGame();
+  }
+}
+
+// ── START / END ──
+function startGame() {
+  initAudio();
+  document.getElementById('splash-screen').classList.add('hidden');
+  setTimeout(() => {
+    document.getElementById('splash-screen').style.display = 'none';
+  }, 600);
+
+  score = 0; timeLeft = 45; combo = 0; bestCombo = 0; popped = 0;
+  colorsUsed = new Set(); bubbles = []; lastPopTime = 0;
+  gameRunning = true;
+
+  // Clear canvas
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  document.getElementById('score').textContent = '0';
+  document.getElementById('timer').textContent = '45';
+  document.getElementById('timer').style.color = '';
+  document.getElementById('combo-display').textContent = 'x1';
+
+  spawnTimer = setInterval(spawnBubble, 750);
+  gameTimer = setInterval(tick, 1000);
+
+  // Spawn a few immediately
+  spawnBubble(); spawnBubble(); spawnBubble();
+}
+
+function endGame() {
+  gameRunning = false;
+  clearInterval(spawnTimer);
+  clearInterval(gameTimer);
+
+  // Clear remaining bubbles
+  bubbles.forEach(b => b.el.remove());
+  bubbles = [];
+
+  // Show results
+  document.getElementById('final-score').textContent = score;
+  document.getElementById('stat-popped').textContent = popped;
+  document.getElementById('stat-combo').textContent = 'x' + bestCombo;
+  document.getElementById('stat-colors').textContent = colorsUsed.size;
+
+  const msgs = [
+    'What a colorful masterpiece! 🌈',
+    'Picasso would be jealous! 🎨',
+    'You painted the whole screen! ✨',
+    'Sofia & Ethan, you rock! 🤩',
+    'The most beautiful painting ever! 💖',
+    'Incredible splatting skills! 🫧',
+  ];
+  document.getElementById('final-msg').textContent = msgs[Math.floor(Math.random() * msgs.length)];
+
+  document.getElementById('game-over').classList.add('show');
+}
+
+function restartGame() {
+  document.getElementById('game-over').classList.remove('show');
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  setTimeout(startGame, 300);
+}
+
+// ── FLOATING ANIMATION for bubbles ──
+function animateBubbles() {
+  bubbles.forEach(b => {
+    const age = Date.now() - b.born;
+    const wobble = Math.sin(age / 300) * 3;
+    const float = Math.sin(age / 500) * 5;
+    b.el.style.marginLeft = wobble + 'px';
+    b.el.style.marginTop = float + 'px';
+  });
+  requestAnimationFrame(animateBubbles);
+}
+animateBubbles();
+</script>
+</body>
+</html>

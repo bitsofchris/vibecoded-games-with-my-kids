@@ -1,0 +1,1040 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>💥 SMASH ZONE!</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Lilita+One&family=Russo+One&display=swap');
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{overflow:hidden;height:100vh;width:100vw;background:#1a1a2e;cursor:none;user-select:none;-webkit-user-select:none;font-family:'Russo One',sans-serif}
+  canvas{display:block}
+
+  #splash{position:fixed;inset:0;z-index:1000;background:linear-gradient(135deg,#0f0c29,#302b63,#24243e);display:flex;flex-direction:column;align-items:center;justify-content:center;transition:opacity .6s,transform .6s}
+  #splash.hidden{opacity:0;transform:scale(1.05);pointer-events:none}
+  .s-icon{font-size:clamp(4rem,12vw,8rem);animation:smashPulse 1.2s ease-in-out infinite}
+  @keyframes smashPulse{0%,100%{transform:scale(1) rotate(-5deg)}50%{transform:scale(1.15) rotate(5deg)}}
+  .s-title{font-family:'Lilita One',cursive;font-size:clamp(3.5rem,11vw,8rem);background:linear-gradient(135deg,#FF6B2C,#FFC312,#FF4757);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;filter:drop-shadow(3px 3px 0 rgba(0,0,0,0.3));line-height:1.1}
+  .s-sub{font-size:clamp(.9rem,2.5vw,1.4rem);color:rgba(255,255,255,0.6);margin:8px 0 30px;letter-spacing:1px}
+  .s-btn{font-family:'Lilita One',cursive;font-size:clamp(1.3rem,3.5vw,2rem);padding:16px 55px;border:none;border-radius:12px;background:linear-gradient(135deg,#FF4757,#FF6B2C);color:white;cursor:pointer;box-shadow:0 6px 0 #c0392b,0 10px 30px rgba(0,0,0,0.4);transition:transform .12s,box-shadow .12s;text-transform:uppercase;letter-spacing:2px}
+  .s-btn:hover{transform:translateY(-2px);box-shadow:0 8px 0 #c0392b,0 14px 40px rgba(0,0,0,0.5)}
+  .s-btn:active{transform:translateY(4px);box-shadow:0 2px 0 #c0392b}
+  .s-controls{margin-top:25px;color:rgba(255,255,255,0.35);font-size:.85rem;text-align:center;line-height:1.8}
+
+  #hud{position:fixed;top:12px;left:50%;transform:translateX(-50%);display:none;gap:20px;align-items:center;z-index:200;background:rgba(0,0,0,0.7);backdrop-filter:blur(8px);padding:8px 24px;border-radius:10px;border:1px solid rgba(255,255,255,0.1)}
+  .h-item{display:flex;align-items:center;gap:6px;font-size:clamp(.85rem,2vw,1.2rem);color:rgba(255,255,255,0.8)}
+  .h-val{color:#FFC312;font-family:'Lilita One',cursive;font-size:1.3em}
+  #destruction-bar{width:clamp(100px,20vw,200px);height:12px;background:rgba(255,255,255,0.1);border-radius:6px;overflow:hidden}
+  #destruction-fill{height:100%;width:0%;background:linear-gradient(90deg,#FF4757,#FFC312);border-radius:6px;transition:width .3s}
+
+  #level-banner{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);z-index:300;display:none;text-align:center}
+  .lb-title{font-family:'Lilita One',cursive;font-size:clamp(3rem,8vw,5rem);color:white;text-shadow:0 4px 20px rgba(0,0,0,0.5);animation:lbPop .5s cubic-bezier(.34,1.56,.64,1)}
+  .lb-sub{font-size:1.2rem;color:rgba(255,255,255,0.6);margin-top:8px}
+  @keyframes lbPop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+
+  #next-btn{position:fixed;bottom:30px;right:30px;z-index:200;display:none;font-family:'Lilita One',cursive;font-size:1.3rem;padding:12px 35px;border:none;border-radius:10px;background:linear-gradient(135deg,#2ED573,#1E90FF);color:white;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,0.2);transition:transform .12s;animation:btnPulse 2s ease-in-out infinite}
+  #next-btn:active{transform:translateY(3px)}
+  @keyframes btnPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+</style>
+</head>
+<body>
+
+<div id="splash">
+  <div class="s-icon">🔨</div>
+  <div class="s-title">SMASH ZONE</div>
+  <div class="s-sub">Swing. Smash. Destroy everything.</div>
+  <button class="s-btn" onclick="init()">💥 WRECK IT!</button>
+  <div class="s-controls">Move mouse to swing the wrecking ball<br>Click & hold for POWER MODE 🔥</div>
+</div>
+
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <div class="h-item">💥 <span class="h-val" id="h-score">0</span></div>
+  <div class="h-item">🏗️ <span class="h-val" id="h-level">1</span></div>
+  <div class="h-item" style="gap:10px">
+    <span>DESTROYED</span>
+    <div id="destruction-bar"><div id="destruction-fill"></div></div>
+    <span class="h-val" id="h-pct">0%</span>
+  </div>
+</div>
+
+<div id="level-banner">
+  <div class="lb-title" id="lb-title">LEVEL 1</div>
+  <div class="lb-sub" id="lb-sub">Glass Tower</div>
+</div>
+
+<button id="next-btn" onclick="nextLevel()">NEXT LEVEL ➜</button>
+
+<script>
+// ═══════════════════════════════════════════
+//  SMASH ZONE — Physics Destruction Engine
+// ═══════════════════════════════════════════
+
+const cv = document.getElementById('c');
+const c = cv.getContext('2d');
+let W, H;
+function resize() { W = cv.width = innerWidth; H = cv.height = innerHeight; }
+addEventListener('resize', resize); resize();
+
+// ── AUDIO ENGINE ──
+const AC = window.AudioContext || window.webkitAudioContext;
+let ac;
+function initAudio() { if (!ac) ac = new AC(); }
+
+function noise(duration, freq, type, vol = 0.15) {
+  if (!ac) return;
+  const o = ac.createOscillator();
+  const g = ac.createGain();
+  const f = ac.createBiquadFilter();
+  f.type = 'lowpass';
+  f.frequency.setValueAtTime(freq, ac.currentTime);
+  f.frequency.exponentialRampToValueAtTime(80, ac.currentTime + duration);
+  o.type = type;
+  o.frequency.setValueAtTime(freq, ac.currentTime);
+  if (type === 'sawtooth' || type === 'square') {
+    o.frequency.exponentialRampToValueAtTime(30, ac.currentTime + duration);
+  }
+  g.gain.setValueAtTime(vol, ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + duration);
+  o.connect(f).connect(g).connect(ac.destination);
+  o.start(); o.stop(ac.currentTime + duration);
+}
+
+function playGlassBreak(force) {
+  const v = Math.min(0.2, force * 0.003);
+  // High shimmer
+  for (let i = 0; i < 3; i++) {
+    setTimeout(() => {
+      noise(0.08 + Math.random() * 0.06, 3000 + Math.random() * 4000, 'sine', v * 0.7);
+      noise(0.04, 6000 + Math.random() * 3000, 'square', v * 0.3);
+    }, i * 15);
+  }
+  // Crunch
+  noise(0.12, 800 + Math.random() * 400, 'sawtooth', v * 0.5);
+}
+
+function playWoodBreak(force) {
+  const v = Math.min(0.2, force * 0.004);
+  noise(0.15, 200 + Math.random() * 150, 'sawtooth', v);
+  noise(0.08, 400 + Math.random() * 200, 'square', v * 0.6);
+  setTimeout(() => noise(0.1, 150, 'triangle', v * 0.4), 30);
+}
+
+function playBrickBreak(force) {
+  const v = Math.min(0.22, force * 0.005);
+  noise(0.2, 100 + Math.random() * 80, 'sawtooth', v);
+  noise(0.15, 60, 'square', v * 0.8);
+  setTimeout(() => noise(0.12, 80 + Math.random() * 40, 'triangle', v * 0.5), 40);
+}
+
+function playImpact(force) {
+  const v = Math.min(0.12, force * 0.002);
+  noise(0.1, 120, 'sine', v);
+}
+
+// ── MATERIALS ──
+const MAT = {
+  glass: {
+    hp: 12, density: 0.8, color: 'rgba(150,220,255,0.55)', stroke: 'rgba(180,230,255,0.7)',
+    shardColor: () => `rgba(${170+Math.random()*60},${220+Math.random()*35},255,${0.4+Math.random()*0.4})`,
+    shards: 12, sfx: playGlassBreak, label: 'Glass',
+    fill: (x, y, w, h) => {
+      const g = c.createLinearGradient(x, y, x + w, y + h);
+      g.addColorStop(0, 'rgba(180,235,255,0.6)');
+      g.addColorStop(0.5, 'rgba(140,210,250,0.35)');
+      g.addColorStop(1, 'rgba(180,235,255,0.55)');
+      return g;
+    }
+  },
+  wood: {
+    hp: 25, density: 1.2, color: '#A0724A', stroke: '#7A5533',
+    shardColor: () => `hsl(${28+Math.random()*12},${50+Math.random()*20}%,${35+Math.random()*20}%)`,
+    shards: 7, sfx: playWoodBreak, label: 'Wood',
+    fill: (x, y, w, h) => {
+      const g = c.createLinearGradient(x, y, x + w, y);
+      g.addColorStop(0, '#B8845A'); g.addColorStop(0.3, '#A0724A');
+      g.addColorStop(0.6, '#C09060'); g.addColorStop(1, '#A0724A');
+      return g;
+    }
+  },
+  brick: {
+    hp: 45, density: 2, color: '#C0503C', stroke: '#8B3626',
+    shardColor: () => `hsl(${8+Math.random()*10},${55+Math.random()*20}%,${30+Math.random()*15}%)`,
+    shards: 8, sfx: playBrickBreak, label: 'Brick',
+    fill: (x, y, w, h) => {
+      const g = c.createLinearGradient(x, y, x, y + h);
+      g.addColorStop(0, '#D06050'); g.addColorStop(0.5, '#B04535');
+      g.addColorStop(1, '#C05545');
+      return g;
+    }
+  },
+  stone: {
+    hp: 70, density: 3, color: '#888', stroke: '#666',
+    shardColor: () => `hsl(0,0%,${35+Math.random()*25}%)`,
+    shards: 6, sfx: playBrickBreak, label: 'Stone',
+    fill: (x, y, w, h) => {
+      const g = c.createLinearGradient(x, y, x, y + h);
+      g.addColorStop(0, '#999'); g.addColorStop(0.5, '#777'); g.addColorStop(1, '#888');
+      return g;
+    }
+  }
+};
+
+// ── PHYSICS CONSTANTS ──
+const GRAVITY = 0.65;
+const FRICTION = 0.997;
+const GROUND_BOUNCE = 0.2;
+const DEBRIS_LIMIT = 300;
+
+// ── GAME STATE ──
+let blocks = [];
+let debris = [];
+let score = 0;
+let currentLevel = 0;
+let totalBlocks = 0;
+let brokenBlocks = 0;
+let shakeX = 0, shakeY = 0, shakeMag = 0;
+let gameRunning = false;
+let mouseX = W / 2, mouseY = H / 2;
+let mouseDown = false;
+let powerGlow = 0;
+
+// ── WRECKING BALL (chain physics) ──
+const CHAIN_SEGMENTS = 12;
+const CHAIN_LEN = 32;
+let chain = []; // array of {x, y, ox, oy} verlet points
+let ballRadius = 34;
+let anchorX, anchorY;
+
+function initChain() {
+  anchorX = W / 2; anchorY = 80;
+  chain = [];
+  for (let i = 0; i <= CHAIN_SEGMENTS; i++) {
+    const x = anchorX;
+    const y = anchorY + i * CHAIN_LEN;
+    chain.push({ x, y, ox: x, oy: y });
+  }
+}
+
+function updateChain() {
+  // Anchor follows mouse — allow it to go high enough for full reach
+  const targetAX = mouseX;
+  const targetAY = Math.min(Math.max(mouseY * 0.5, 30), H * 0.55);
+  anchorX += (targetAX - anchorX) * 0.08;
+  anchorY += (targetAY - anchorY) * 0.06;
+
+  // Power mode — tighter, faster follow
+  if (mouseDown) {
+    anchorX += (targetAX - anchorX) * 0.1;
+    anchorY += (targetAY - anchorY) * 0.06;
+    powerGlow = Math.min(powerGlow + 0.03, 1);
+  } else {
+    powerGlow *= 0.95;
+  }
+
+  // Pin first point to anchor
+  chain[0].x = anchorX;
+  chain[0].y = anchorY;
+  chain[0].ox = anchorX;
+  chain[0].oy = anchorY;
+
+  // Verlet integration on chain points — heavy ball pulls hard
+  for (let i = 1; i < chain.length; i++) {
+    const p = chain[i];
+    const vx = (p.x - p.ox) * FRICTION;
+    const vy = (p.y - p.oy) * FRICTION;
+    p.ox = p.x;
+    p.oy = p.y;
+    // Heavier at the end (ball end gets more gravity)
+    const massScale = 0.5 + (i / chain.length) * 1.0;
+    p.x += vx;
+    p.y += vy + GRAVITY * massScale;
+  }
+
+  // Distance constraints (many iterations = stiff, smooth chain)
+  for (let iter = 0; iter < 12; iter++) {
+    for (let i = 0; i < chain.length - 1; i++) {
+      const a = chain[i], b = chain[i + 1];
+      const dx = b.x - a.x, dy = b.y - a.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist === 0) continue;
+      const diff = (dist - CHAIN_LEN) / dist;
+      const mx = dx * diff * 0.5;
+      const my = dy * diff * 0.5;
+      if (i > 0) { a.x += mx; a.y += my; }
+      b.x -= mx; b.y -= my;
+    }
+    // Re-pin anchor
+    chain[0].x = anchorX; chain[0].y = anchorY;
+  }
+
+  // Ground constraint for ball — heavy, minimal bounce
+  const ball = chain[chain.length - 1];
+  const groundY = H - 60;
+  if (ball.y + ballRadius > groundY) {
+    ball.y = groundY - ballRadius;
+    // Barely bounce — heavy ball just scrapes along
+    const vy = ball.y - ball.oy;
+    ball.oy = ball.y + vy * 0.15;
+    // Slow horizontal too
+    ball.ox = ball.x - (ball.x - ball.ox) * 0.92;
+  }
+  // Wall constraints — minimal bounce
+  if (ball.x - ballRadius < 0) { ball.x = ballRadius; ball.ox = ball.x + (ball.x - ball.ox) * 0.2; }
+  if (ball.x + ballRadius > W) { ball.x = W - ballRadius; ball.ox = ball.x + (ball.x - ball.ox) * 0.2; }
+}
+
+function getBallVelocity() {
+  const b = chain[chain.length - 1];
+  return { vx: b.x - b.ox, vy: b.y - b.oy };
+}
+
+// ── BLOCKS ──
+function createBlock(x, y, w, h, mat) {
+  return {
+    x, y, w, h, mat,
+    hp: MAT[mat].hp,
+    maxHp: MAT[mat].hp,
+    vx: 0, vy: 0, vr: 0,
+    angle: 0,
+    dynamic: false,
+    settled: 0,
+    crackLevel: 0,
+  };
+}
+
+// ── DEBRIS ──
+function spawnDebris(block, force) {
+  const mat = MAT[block.mat];
+  const count = mat.shards + Math.floor(force * 0.3);
+  for (let i = 0; i < count && debris.length < DEBRIS_LIMIT; i++) {
+    const size = 3 + Math.random() * (block.w * 0.25);
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 2 + Math.random() * force * 0.4;
+    debris.push({
+      x: block.x + block.w * (0.2 + Math.random() * 0.6),
+      y: block.y + block.h * (0.2 + Math.random() * 0.6),
+      w: size, h: size * (0.4 + Math.random() * 0.8),
+      vx: Math.cos(angle) * speed * (0.5 + Math.random()),
+      vy: Math.sin(angle) * speed - 2,
+      vr: (Math.random() - 0.5) * 15,
+      angle: Math.random() * 360,
+      color: mat.shardColor(),
+      life: 1,
+      groundY: H - 60 + Math.random() * 20,
+      grounded: false,
+    });
+  }
+}
+
+// ── COLLISION ──
+function ballBlockCollision() {
+  const ball = chain[chain.length - 1];
+  const bv = getBallVelocity();
+  const speed = Math.sqrt(bv.vx * bv.vx + bv.vy * bv.vy);
+
+  blocks.forEach(block => {
+    if (block.hp <= 0) return;
+
+    // Circle vs AABB
+    const cx = Math.max(block.x, Math.min(ball.x, block.x + block.w));
+    const cy = Math.max(block.y, Math.min(ball.y, block.y + block.h));
+    const dx = ball.x - cx, dy = ball.y - cy;
+    const dist = Math.sqrt(dx * dx + dy * dy);
+
+    if (dist < ballRadius) {
+      const force = speed * (mouseDown ? 3.0 : 1.8);
+      const overlap = ballRadius - dist;
+      const nx = dist > 0 ? dx / dist : 0;
+      const ny = dist > 0 ? dy / dist : -1;
+
+      // Push ball out — but only slightly (heavy ball plows through)
+      ball.x += nx * overlap * 0.3;
+      ball.y += ny * overlap * 0.3;
+
+      // Minimal bounce — heavy ball keeps going, doesn't ricochet
+      const dot = bv.vx * nx + bv.vy * ny;
+      const dampening = 0.12; // very low = ball barely bounces
+      ball.ox = ball.x + (bv.vx - 2 * dot * nx * dampening);
+      ball.oy = ball.y + (bv.vy - 2 * dot * ny * dampening);
+
+      // Damage block
+      const dmg = force * (1 + powerGlow * 0.5);
+      block.hp -= dmg;
+      block.crackLevel = 1 - (block.hp / block.maxHp);
+
+      playImpact(force);
+
+      // Transfer momentum TO the block (push it hard)
+      const pushX = bv.vx * 0.7;
+      const pushY = bv.vy * 0.5;
+
+      if (block.hp <= 0) {
+        // BREAK!
+        MAT[block.mat].sfx(force);
+        spawnDebris(block, force);
+        score += Math.floor(10 * MAT[block.mat].density * (1 + powerGlow));
+        brokenBlocks++;
+        updateHUD();
+        shakeMag = Math.min(18, force * 1.5);
+
+        // PROPAGATE: push ALL nearby/touching blocks
+        blocks.forEach(other => {
+          if (other.hp <= 0 || other === block) return;
+          const cdx = (other.x + other.w/2) - (block.x + block.w/2);
+          const cdy = (other.y + other.h/2) - (block.y + block.h/2);
+          const cdist = Math.sqrt(cdx*cdx + cdy*cdy);
+          const touchDist = Math.max(block.w, block.h) * 1.5;
+          if (cdist < touchDist) {
+            other.dynamic = true;
+            const falloff = 1 - (cdist / touchDist);
+            const dirX = cdist > 0 ? cdx / cdist : 0;
+            const dirY = cdist > 0 ? cdy / cdist : -1;
+            other.vx += (pushX * 0.6 + dirX * force * 0.3) * falloff;
+            other.vy += (pushY * 0.4 + dirY * force * 0.2 - 1.5) * falloff;
+            other.vr += (Math.random() - 0.5) * force * 0.3 * falloff;
+          }
+        });
+      } else {
+        // Push the hit block
+        if (!block.dynamic && force > 1.5) {
+          block.dynamic = true;
+        }
+        block.vx += pushX;
+        block.vy += pushY;
+        block.vr += (Math.random() - 0.5) * force * 0.4;
+        shakeMag = Math.min(10, force * 0.6);
+
+        // Push neighbors proportionally
+        blocks.forEach(other => {
+          if (other.hp <= 0 || other === block) return;
+          const cdx = (other.x + other.w/2) - (block.x + block.w/2);
+          const cdy = (other.y + other.h/2) - (block.y + block.h/2);
+          const cdist = Math.sqrt(cdx*cdx + cdy*cdy);
+          const touchDist = Math.max(block.w, block.h) * 1.3;
+          if (cdist < touchDist) {
+            other.dynamic = true;
+            const falloff = (1 - cdist / touchDist) * 0.5;
+            other.vx += pushX * falloff;
+            other.vy += pushY * falloff;
+            other.vr += (Math.random() - 0.5) * 2 * falloff;
+          }
+        });
+      }
+    }
+  });
+}
+
+function updateBlocks() {
+  const groundY = H - 60;
+
+  blocks.forEach(block => {
+    if (block.hp <= 0) return;
+    if (!block.dynamic) return;
+
+    block.vy += GRAVITY * 0.6;
+    block.vx *= 0.99;
+    block.x += block.vx;
+    block.y += block.vy;
+    block.angle += block.vr;
+    block.vr *= 0.97;
+
+    // Ground
+    if (block.y + block.h > groundY) {
+      block.y = groundY - block.h;
+      // Break from fall speed
+      if (Math.abs(block.vy) > 3) {
+        const fallForce = Math.abs(block.vy) * 2.5;
+        block.hp -= fallForce;
+        block.crackLevel = 1 - (block.hp / block.maxHp);
+        if (block.hp <= 0) {
+          MAT[block.mat].sfx(fallForce);
+          spawnDebris(block, fallForce);
+          score += Math.floor(5 * MAT[block.mat].density);
+          brokenBlocks++;
+          updateHUD();
+          shakeMag = Math.min(8, fallForce * 0.4);
+        }
+      }
+      block.vy *= -GROUND_BOUNCE;
+      block.vx *= 0.8;
+      block.vr *= 0.7;
+      if (Math.abs(block.vy) < 0.5) {
+        block.vy = 0;
+        block.settled++;
+      }
+    }
+
+    // Walls
+    if (block.x < 0) { block.x = 0; block.vx *= -0.5; }
+    if (block.x + block.w > W) { block.x = W - block.w; block.vx *= -0.5; }
+
+    // Block-on-block collision with momentum transfer
+    blocks.forEach(other => {
+      if (other === block || other.hp <= 0) return;
+      if (block.x < other.x + other.w && block.x + block.w > other.x &&
+          block.y < other.y + other.h && block.y + block.h > other.y) {
+        const overlapX = Math.min(block.x + block.w - other.x, other.x + other.w - block.x);
+        const overlapY = Math.min(block.y + block.h - other.y, other.y + other.h - block.y);
+
+        // Momentum transfer — push the other block too
+        const transferRate = 0.6;
+
+        if (overlapX < overlapY) {
+          if (block.x < other.x) {
+            block.x -= overlapX * 0.4;
+            other.x += overlapX * 0.4;
+          } else {
+            block.x += overlapX * 0.4;
+            other.x -= overlapX * 0.4;
+          }
+          // Transfer horizontal momentum
+          other.dynamic = true;
+          const avgVx = (block.vx + other.vx) * 0.5;
+          other.vx += (block.vx - other.vx) * transferRate;
+          block.vx = avgVx * 0.5;
+          other.vr += block.vx * 0.15;
+        } else {
+          if (block.y < other.y) {
+            block.y -= overlapY * 0.4;
+            other.y += overlapY * 0.2;
+            block.vy *= -GROUND_BOUNCE;
+            // Transfer downward force
+            if (Math.abs(block.vy) > 1) {
+              other.dynamic = true;
+              other.vy += block.vy * transferRate;
+              other.vx += block.vx * 0.3;
+              other.vr += (Math.random() - 0.5) * 2;
+              // Damage from heavy impact
+              if (Math.abs(block.vy) > 5) {
+                const impactDmg = Math.abs(block.vy) * MAT[block.mat].density * 0.3;
+                other.hp -= impactDmg;
+                other.crackLevel = 1 - (other.hp / other.maxHp);
+                if (other.hp <= 0) {
+                  MAT[other.mat].sfx(impactDmg);
+                  spawnDebris(other, impactDmg);
+                  score += Math.floor(5 * MAT[other.mat].density);
+                  brokenBlocks++;
+                  updateHUD();
+                  shakeMag = Math.max(shakeMag, impactDmg * 0.3);
+                }
+              }
+            }
+            if (Math.abs(block.vy) < 0.5) block.settled++;
+          } else {
+            block.y += overlapY * 0.4;
+            other.dynamic = true;
+            other.vy += block.vy * transferRate * 0.5;
+            other.vx += block.vx * 0.2;
+          }
+        }
+      }
+    });
+  });
+
+  // Remove dead blocks
+  blocks = blocks.filter(b => b.hp > 0);
+}
+
+function updateDebris() {
+  debris.forEach(d => {
+    if (d.grounded) { d.life -= 0.003; return; }
+    d.vy += GRAVITY * 0.6;
+    d.vx *= 0.995;
+    d.x += d.vx;
+    d.y += d.vy;
+    d.angle += d.vr;
+
+    if (d.y > d.groundY) {
+      d.y = d.groundY;
+      d.vy *= -0.2;
+      d.vx *= 0.7;
+      d.vr *= 0.5;
+      if (Math.abs(d.vy) < 1) {
+        d.grounded = true;
+        d.vy = 0;
+      }
+    }
+    if (d.x < 0 || d.x > W) d.vx *= -0.5;
+  });
+  debris = debris.filter(d => d.life > 0);
+}
+
+// ── SCREEN SHAKE ──
+function updateShake() {
+  if (shakeMag > 0.1) {
+    shakeX = (Math.random() - 0.5) * shakeMag;
+    shakeY = (Math.random() - 0.5) * shakeMag;
+    shakeMag *= 0.88;
+  } else {
+    shakeX = shakeY = shakeMag = 0;
+  }
+}
+
+// ── DRAWING ──
+function drawBackground() {
+  // Sky gradient
+  const sky = c.createLinearGradient(0, 0, 0, H);
+  sky.addColorStop(0, '#1a1a2e');
+  sky.addColorStop(0.5, '#16213e');
+  sky.addColorStop(0.85, '#1a1a2e');
+  sky.addColorStop(1, '#2d2d44');
+  c.fillStyle = sky;
+  c.fillRect(0, 0, W, H);
+
+  // Stars
+  c.fillStyle = 'rgba(255,255,255,0.3)';
+  for (let i = 0; i < 40; i++) {
+    const sx = (i * 137.5 + 50) % W;
+    const sy = (i * 97.3 + 20) % (H * 0.5);
+    const sr = 0.5 + (i % 3) * 0.5;
+    c.beginPath(); c.arc(sx, sy, sr, 0, Math.PI * 2); c.fill();
+  }
+
+  // Ground
+  c.fillStyle = '#2d2d44';
+  c.fillRect(0, H - 60, W, 60);
+  c.fillStyle = '#3a3a55';
+  c.fillRect(0, H - 60, W, 3);
+
+  // Ground texture lines
+  c.strokeStyle = 'rgba(255,255,255,0.03)';
+  c.lineWidth = 1;
+  for (let x = 0; x < W; x += 40) {
+    c.beginPath(); c.moveTo(x, H - 57); c.lineTo(x + 20, H); c.stroke();
+  }
+}
+
+function drawChain() {
+  // Chain links
+  c.strokeStyle = '#666';
+  c.lineWidth = 4;
+  c.lineCap = 'round';
+  c.beginPath();
+  chain.forEach((p, i) => {
+    if (i === 0) c.moveTo(p.x, p.y);
+    else c.lineTo(p.x, p.y);
+  });
+  c.stroke();
+
+  // Chain link details
+  c.fillStyle = '#888';
+  for (let i = 1; i < chain.length - 1; i += 2) {
+    c.beginPath();
+    c.arc(chain[i].x, chain[i].y, 3, 0, Math.PI * 2);
+    c.fill();
+  }
+
+  // Anchor point (crane hook)
+  c.fillStyle = '#AAA';
+  c.beginPath();
+  c.arc(anchorX, anchorY, 8, 0, Math.PI * 2);
+  c.fill();
+  c.fillStyle = '#888';
+  c.beginPath();
+  c.arc(anchorX, anchorY, 4, 0, Math.PI * 2);
+  c.fill();
+}
+
+function drawBall() {
+  const ball = chain[chain.length - 1];
+
+  // Power glow
+  if (powerGlow > 0.05) {
+    const grd = c.createRadialGradient(ball.x, ball.y, ballRadius, ball.x, ball.y, ballRadius * 3);
+    grd.addColorStop(0, `rgba(255,${Math.floor(100 - powerGlow * 100)},0,${powerGlow * 0.4})`);
+    grd.addColorStop(1, 'rgba(255,0,0,0)');
+    c.fillStyle = grd;
+    c.beginPath(); c.arc(ball.x, ball.y, ballRadius * 3, 0, Math.PI * 2); c.fill();
+  }
+
+  // Shadow
+  c.fillStyle = 'rgba(0,0,0,0.3)';
+  c.beginPath();
+  c.ellipse(ball.x + 3, H - 56, ballRadius * 0.7, 5, 0, 0, Math.PI * 2);
+  c.fill();
+
+  // Ball
+  const bg = c.createRadialGradient(ball.x - 8, ball.y - 10, 4, ball.x, ball.y, ballRadius);
+  bg.addColorStop(0, '#777');
+  bg.addColorStop(0.6, '#444');
+  bg.addColorStop(1, '#222');
+  c.fillStyle = bg;
+  c.beginPath(); c.arc(ball.x, ball.y, ballRadius, 0, Math.PI * 2); c.fill();
+
+  // Metallic highlight
+  c.fillStyle = 'rgba(255,255,255,0.15)';
+  c.beginPath(); c.arc(ball.x - 7, ball.y - 8, ballRadius * 0.35, 0, Math.PI * 2); c.fill();
+
+  // Ring
+  c.strokeStyle = '#555';
+  c.lineWidth = 3;
+  c.beginPath(); c.arc(ball.x, ball.y, ballRadius - 1, 0, Math.PI * 2); c.stroke();
+}
+
+function drawBlocks() {
+  blocks.forEach(block => {
+    if (block.hp <= 0) return;
+    const m = MAT[block.mat];
+
+    c.save();
+    if (block.angle) {
+      c.translate(block.x + block.w / 2, block.y + block.h / 2);
+      c.rotate(block.angle * Math.PI / 180);
+      c.translate(-(block.x + block.w / 2), -(block.y + block.h / 2));
+    }
+
+    // Shadow
+    c.fillStyle = 'rgba(0,0,0,0.15)';
+    c.fillRect(block.x + 3, block.y + 3, block.w, block.h);
+
+    // Block body
+    c.fillStyle = m.fill(block.x, block.y, block.w, block.h);
+    c.fillRect(block.x, block.y, block.w, block.h);
+
+    // Border
+    c.strokeStyle = m.stroke;
+    c.lineWidth = 1.5;
+    c.strokeRect(block.x, block.y, block.w, block.h);
+
+    // Glass reflection
+    if (block.mat === 'glass') {
+      c.fillStyle = 'rgba(255,255,255,0.15)';
+      c.beginPath();
+      c.moveTo(block.x + 3, block.y + 3);
+      c.lineTo(block.x + block.w * 0.4, block.y + 3);
+      c.lineTo(block.x + 3, block.y + block.h * 0.5);
+      c.closePath(); c.fill();
+    }
+
+    // Brick lines
+    if (block.mat === 'brick' && block.w > 25) {
+      c.strokeStyle = 'rgba(0,0,0,0.2)';
+      c.lineWidth = 1;
+      const bh = block.h / 2;
+      c.beginPath();
+      c.moveTo(block.x, block.y + bh);
+      c.lineTo(block.x + block.w, block.y + bh);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(block.x + block.w / 2, block.y);
+      c.lineTo(block.x + block.w / 2, block.y + bh);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(block.x + block.w / 4, block.y + bh);
+      c.lineTo(block.x + block.w / 4, block.y + block.h);
+      c.stroke();
+      c.beginPath();
+      c.moveTo(block.x + block.w * 3 / 4, block.y + bh);
+      c.lineTo(block.x + block.w * 3 / 4, block.y + block.h);
+      c.stroke();
+    }
+
+    // Wood grain
+    if (block.mat === 'wood') {
+      c.strokeStyle = 'rgba(0,0,0,0.1)';
+      c.lineWidth = 1;
+      for (let i = 0; i < 3; i++) {
+        const gy = block.y + block.h * (0.25 + i * 0.25);
+        c.beginPath();
+        c.moveTo(block.x + 2, gy);
+        c.bezierCurveTo(block.x + block.w * 0.3, gy - 3, block.x + block.w * 0.7, gy + 3, block.x + block.w - 2, gy);
+        c.stroke();
+      }
+    }
+
+    // Cracks
+    if (block.crackLevel > 0.2) {
+      c.strokeStyle = `rgba(0,0,0,${block.crackLevel * 0.6})`;
+      c.lineWidth = 1;
+      const cx = block.x + block.w * (0.3 + Math.sin(block.x) * 0.2);
+      const cy = block.y + block.h * (0.3 + Math.cos(block.y) * 0.2);
+      const numCracks = Math.floor(block.crackLevel * 5);
+      for (let i = 0; i < numCracks; i++) {
+        const a = (i / numCracks) * Math.PI * 2 + block.x * 0.1;
+        const len = block.crackLevel * Math.min(block.w, block.h) * 0.5;
+        c.beginPath();
+        c.moveTo(cx, cy);
+        c.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len);
+        c.lineTo(cx + Math.cos(a + 0.3) * len * 0.6, cy + Math.sin(a + 0.5) * len * 0.7);
+        c.stroke();
+      }
+    }
+
+    // Damage tint
+    if (block.crackLevel > 0.5) {
+      c.fillStyle = `rgba(0,0,0,${(block.crackLevel - 0.5) * 0.3})`;
+      c.fillRect(block.x, block.y, block.w, block.h);
+    }
+
+    c.restore();
+  });
+}
+
+function drawDebris() {
+  debris.forEach(d => {
+    c.save();
+    c.globalAlpha = d.life;
+    c.translate(d.x, d.y);
+    c.rotate(d.angle * Math.PI / 180);
+    c.fillStyle = d.color;
+    c.fillRect(-d.w / 2, -d.h / 2, d.w, d.h);
+    c.restore();
+  });
+  c.globalAlpha = 1;
+}
+
+function drawCursor() {
+  // Custom crosshair
+  c.save();
+  c.translate(mouseX, mouseY);
+  c.strokeStyle = mouseDown ? `rgba(255,${Math.floor(150 - powerGlow * 150)},0,0.8)` : 'rgba(255,255,255,0.5)';
+  c.lineWidth = 2;
+  const cs = 12;
+  c.beginPath(); c.moveTo(-cs, 0); c.lineTo(-cs / 3, 0); c.stroke();
+  c.beginPath(); c.moveTo(cs, 0); c.lineTo(cs / 3, 0); c.stroke();
+  c.beginPath(); c.moveTo(0, -cs); c.lineTo(0, -cs / 3); c.stroke();
+  c.beginPath(); c.moveTo(0, cs); c.lineTo(0, cs / 3); c.stroke();
+  c.beginPath(); c.arc(0, 0, cs / 2, 0, Math.PI * 2);
+  c.stroke();
+  c.restore();
+}
+
+// ── HUD ──
+function updateHUD() {
+  document.getElementById('h-score').textContent = score;
+  const pct = totalBlocks > 0 ? Math.floor((brokenBlocks / totalBlocks) * 100) : 0;
+  document.getElementById('h-pct').textContent = pct + '%';
+  document.getElementById('destruction-fill').style.width = pct + '%';
+
+  if (pct >= 90 && blocks.length > 0) {
+    // Almost done — let them know
+  }
+  if (blocks.every(b => b.hp <= 0) || blocks.length === 0) {
+    showNextLevel();
+  }
+}
+
+function showNextLevel() {
+  document.getElementById('next-btn').style.display = 'block';
+}
+
+// ── LEVELS ──
+const LEVELS = [
+  {
+    name: 'Glass Tower', sub: 'So fragile... so satisfying 🫙',
+    build: () => {
+      const cx = W / 2;
+      const ground = H - 60;
+      const bw = 60, bh = 30;
+      const cols = 4, rows = 8;
+      const startX = cx - (cols * bw) / 2;
+      for (let r = 0; r < rows; r++) {
+        for (let col = 0; col < cols; col++) {
+          blocks.push(createBlock(
+            startX + col * bw, ground - (r + 1) * bh, bw - 2, bh - 2, 'glass'
+          ));
+        }
+      }
+    }
+  },
+  {
+    name: 'Wooden Cabin', sub: 'Chop chop! 🪵',
+    build: () => {
+      const cx = W / 2;
+      const ground = H - 60;
+      const bw = 70, bh = 25;
+      // Walls
+      for (let r = 0; r < 6; r++) {
+        blocks.push(createBlock(cx - 140, ground - (r+1)*bh, bw-2, bh-2, 'wood'));
+        blocks.push(createBlock(cx + 70, ground - (r+1)*bh, bw-2, bh-2, 'wood'));
+      }
+      // Windows (glass)
+      for (let r = 1; r < 4; r++) {
+        blocks.push(createBlock(cx - 68, ground - (r+1)*bh, bw-2, bh-2, 'glass'));
+        blocks.push(createBlock(cx, ground - (r+1)*bh, bw-2, bh-2, 'glass'));
+      }
+      // Roof
+      for (let i = 0; i < 5; i++) {
+        blocks.push(createBlock(cx - 160 + i * 70, ground - 7*bh, 68, bh-2, 'wood'));
+      }
+      // Roof peak
+      for (let i = 0; i < 3; i++) {
+        blocks.push(createBlock(cx - 90 + i * 70, ground - 8*bh, 68, bh-2, 'wood'));
+      }
+    }
+  },
+  {
+    name: 'Brick Fortress', sub: 'This one\'s tough! 🧱',
+    build: () => {
+      const cx = W / 2;
+      const ground = H - 60;
+      const bw = 55, bh = 28;
+      // Base wall
+      for (let r = 0; r < 5; r++) {
+        for (let col = 0; col < 6; col++) {
+          blocks.push(createBlock(cx - 165 + col*bw, ground-(r+1)*bh, bw-2, bh-2, 'brick'));
+        }
+      }
+      // Towers
+      for (let r = 5; r < 9; r++) {
+        blocks.push(createBlock(cx - 165, ground-(r+1)*bh, bw-2, bh-2, 'brick'));
+        blocks.push(createBlock(cx - 165 + 5*bw, ground-(r+1)*bh, bw-2, bh-2, 'brick'));
+      }
+      // Glass windows in middle
+      for (let r = 1; r < 4; r++) {
+        for (let col = 2; col < 4; col++) {
+          const bk = blocks.find(b => Math.abs(b.x - (cx - 165 + col*bw)) < 5 && Math.abs(b.y - (ground-(r+1)*bh)) < 5);
+          if (bk) { bk.mat = 'glass'; bk.hp = MAT.glass.hp; bk.maxHp = MAT.glass.hp; }
+        }
+      }
+    }
+  },
+  {
+    name: 'The Grand Castle', sub: 'Bring. It. Down. 🏰',
+    build: () => {
+      const cx = W / 2;
+      const ground = H - 60;
+      const bw = 48, bh = 24;
+      // Wide base - stone
+      for (let col = 0; col < 8; col++) {
+        blocks.push(createBlock(cx - 192 + col*bw, ground - bh, bw-2, bh-2, 'stone'));
+      }
+      // Brick walls
+      for (let r = 1; r < 6; r++) {
+        for (let col = 0; col < 8; col++) {
+          blocks.push(createBlock(cx - 192 + col*bw, ground-(r+1)*bh, bw-2, bh-2, 'brick'));
+        }
+      }
+      // Glass row
+      for (let col = 1; col < 7; col++) {
+        blocks.push(createBlock(cx - 192 + col*bw, ground - 7*bh, bw-2, bh-2, 'glass'));
+      }
+      // Tower left & right
+      for (let r = 7; r < 11; r++) {
+        blocks.push(createBlock(cx - 192, ground-(r+1)*bh, bw-2, bh-2, 'brick'));
+        blocks.push(createBlock(cx - 192 + bw, ground-(r+1)*bh, bw-2, bh-2, 'wood'));
+        blocks.push(createBlock(cx - 192 + 6*bw, ground-(r+1)*bh, bw-2, bh-2, 'wood'));
+        blocks.push(createBlock(cx - 192 + 7*bw, ground-(r+1)*bh, bw-2, bh-2, 'brick'));
+      }
+      // Center tower
+      for (let r = 7; r < 10; r++) {
+        blocks.push(createBlock(cx - bw, ground-(r+1)*bh, bw-2, bh-2, 'wood'));
+        blocks.push(createBlock(cx, ground-(r+1)*bh, bw-2, bh-2, 'wood'));
+      }
+      // Tower tops - glass
+      blocks.push(createBlock(cx - 192, ground - 12*bh, bw-2, bh-2, 'glass'));
+      blocks.push(createBlock(cx - 192 + 7*bw, ground - 12*bh, bw-2, bh-2, 'glass'));
+      blocks.push(createBlock(cx - bw/2, ground - 11*bh, bw-2, bh-2, 'glass'));
+    }
+  },
+  {
+    name: 'MEGA TOWER', sub: 'Everything must go!! 💥💥💥',
+    build: () => {
+      const cx = W / 2;
+      const ground = H - 60;
+      const bw = 44, bh = 22;
+      const materials = ['stone', 'brick', 'brick', 'wood', 'wood', 'glass', 'glass'];
+      for (let r = 0; r < 14; r++) {
+        const cols = Math.max(2, 7 - Math.floor(r / 2));
+        const mat = materials[Math.min(r, materials.length - 1)];
+        for (let col = 0; col < cols; col++) {
+          blocks.push(createBlock(
+            cx - (cols * bw) / 2 + col * bw,
+            ground - (r + 1) * bh,
+            bw - 2, bh - 2,
+            mat
+          ));
+        }
+      }
+    }
+  }
+];
+
+function loadLevel(idx) {
+  blocks = [];
+  debris = [];
+  brokenBlocks = 0;
+  currentLevel = idx;
+  document.getElementById('next-btn').style.display = 'none';
+
+  LEVELS[idx].build();
+  totalBlocks = blocks.length;
+  updateHUD();
+  document.getElementById('h-level').textContent = idx + 1;
+
+  // Show banner
+  const banner = document.getElementById('level-banner');
+  document.getElementById('lb-title').textContent = `Level ${idx + 1}`;
+  document.getElementById('lb-sub').textContent = LEVELS[idx].name + ' — ' + LEVELS[idx].sub;
+  banner.style.display = 'block';
+  setTimeout(() => banner.style.display = 'none', 2000);
+}
+
+function nextLevel() {
+  const next = (currentLevel + 1) % LEVELS.length;
+  loadLevel(next);
+}
+
+// ── MAIN LOOP ──
+let lastTime = 0;
+function loop(ts) {
+  if (!gameRunning) return;
+  const dt = Math.min((ts - lastTime) / 1000, 0.05);
+  lastTime = ts;
+
+  updateChain();
+  ballBlockCollision();
+  updateBlocks();
+  updateDebris();
+  updateShake();
+
+  c.save();
+  c.translate(shakeX, shakeY);
+
+  drawBackground();
+  drawDebris();
+  drawBlocks();
+  drawChain();
+  drawBall();
+  drawCursor();
+
+  c.restore();
+
+  requestAnimationFrame(loop);
+}
+
+// ── INPUT ──
+addEventListener('mousemove', e => { mouseX = e.clientX; mouseY = e.clientY; });
+addEventListener('touchmove', e => { e.preventDefault(); mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY; }, { passive: false });
+addEventListener('touchstart', e => { mouseX = e.touches[0].clientX; mouseY = e.touches[0].clientY; mouseDown = true; });
+addEventListener('mousedown', () => mouseDown = true);
+addEventListener('mouseup', () => mouseDown = false);
+addEventListener('touchend', () => mouseDown = false);
+
+// ── INIT ──
+function init() {
+  initAudio();
+  document.getElementById('splash').classList.add('hidden');
+  setTimeout(() => document.getElementById('splash').style.display = 'none', 700);
+  document.getElementById('hud').style.display = 'flex';
+
+  initChain();
+  gameRunning = true;
+  lastTime = performance.now();
+  loadLevel(0);
+  requestAnimationFrame(loop);
+}
+
+// Idle bg
+function idleBg() {
+  if (gameRunning) return;
+  c.clearRect(0, 0, W, H);
+  drawBackground();
+  requestAnimationFrame(idleBg);
+}
+idleBg();
+</script>
+</body>
+</html>

@@ -1,156 +1,451 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Cat Stack Dash</title>
-    <link rel="stylesheet" href="styles.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>🕹️ Arcade</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Outfit:wght@300;400;600;800&display=swap');
+
+  :root {
+    --neon-pink: #FF2D78;
+    --neon-cyan: #00F0FF;
+    --neon-yellow: #FFE14D;
+    --neon-green: #39FF14;
+    --neon-purple: #BF40FF;
+    --dark-bg: #0A0A12;
+    --card-bg: #12121E;
+    --card-border: #1E1E32;
+    --text-dim: #6B6B8D;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--dark-bg);
+    color: #E8E8F0;
+    font-family: 'Outfit', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── SCANLINE OVERLAY ── */
+  body::after {
+    content: '';
+    position: fixed; inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.03) 2px,
+      rgba(0,0,0,0.03) 4px
+    );
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  /* ── HEADER ── */
+  .header {
+    text-align: center;
+    padding: 60px 20px 40px;
+    position: relative;
+  }
+  .header::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 80%;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, var(--neon-cyan), transparent);
+    opacity: 0.3;
+  }
+
+  .logo {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(1.8rem, 5vw, 3.2rem);
+    letter-spacing: 4px;
+    margin-bottom: 12px;
+    position: relative;
+    display: inline-block;
+  }
+  .logo .arcade-text {
+    background: linear-gradient(135deg, var(--neon-cyan), var(--neon-pink), var(--neon-yellow));
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    background-clip: text;
+    filter: drop-shadow(0 0 20px rgba(0,240,255,0.3));
+    animation: glowPulse 3s ease-in-out infinite;
+  }
+  @keyframes glowPulse {
+    0%, 100% { filter: drop-shadow(0 0 20px rgba(0,240,255,0.3)); }
+    50% { filter: drop-shadow(0 0 35px rgba(0,240,255,0.5)); }
+  }
+  .logo-icon {
+    font-size: 0.85em;
+    margin-right: 10px;
+    animation: joystickWiggle 2s ease-in-out infinite;
+  }
+  @keyframes joystickWiggle {
+    0%, 100% { transform: rotate(-5deg); }
+    50% { transform: rotate(5deg); }
+  }
+
+  .tagline {
+    font-size: clamp(0.85rem, 2vw, 1.1rem);
+    color: var(--text-dim);
+    font-weight: 300;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+  }
+
+  /* ── GAME COUNT BAR ── */
+  .stats-bar {
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    margin: 30px auto 10px;
+    padding: 14px 30px;
+    max-width: 500px;
+    border-top: 1px solid var(--card-border);
+    border-bottom: 1px solid var(--card-border);
+  }
+  .stat {
+    text-align: center;
+  }
+  .stat-val {
+    font-family: 'Press Start 2P', monospace;
+    font-size: 1.3rem;
+    color: var(--neon-cyan);
+  }
+  .stat-label {
+    font-size: 0.7rem;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    margin-top: 4px;
+  }
+
+  /* ── GAME GRID ── */
+  .games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 28px;
+    max-width: 1200px;
+    margin: 40px auto;
+    padding: 0 30px 80px;
+  }
+
+  /* ── GAME CARD ── */
+  .game-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    overflow: hidden;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s, border-color 0.3s;
+    cursor: pointer;
+    text-decoration: none;
+    color: inherit;
+    display: block;
+    position: relative;
+  }
+  .game-card:hover {
+    transform: translateY(-6px) scale(1.02);
+    border-color: var(--neon-cyan);
+    box-shadow:
+      0 10px 40px rgba(0, 240, 255, 0.12),
+      0 0 0 1px rgba(0, 240, 255, 0.15),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+  .game-card:active {
+    transform: translateY(-2px) scale(1.0);
+  }
+
+  /* Card glow accent — unique per card */
+  .game-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 3px;
+    background: var(--accent);
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .game-card:hover::before { opacity: 1; }
+
+  /* ── SCREENSHOT AREA ── */
+  .card-thumb {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    overflow: hidden;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--thumb-bg, #161625);
+  }
+  .card-thumb img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.5s;
+  }
+  .game-card:hover .card-thumb img {
+    transform: scale(1.06);
+  }
+
+  /* Placeholder when no screenshot */
+  .thumb-placeholder {
+    font-size: 4rem;
+    filter: drop-shadow(0 4px 12px rgba(0,0,0,0.4));
+    animation: float 3s ease-in-out infinite;
+  }
+  @keyframes float {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-8px); }
+  }
+
+  /* Play overlay */
+  .play-overlay {
+    position: absolute; inset: 0;
+    background: rgba(0,0,0,0.55);
+    display: flex; align-items: center; justify-content: center;
+    opacity: 0;
+    transition: opacity 0.3s;
+  }
+  .game-card:hover .play-overlay { opacity: 1; }
+  .play-btn-icon {
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: var(--accent, var(--neon-cyan));
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 0 30px rgba(0,240,255,0.4);
+    transition: transform 0.2s;
+  }
+  .game-card:hover .play-btn-icon { transform: scale(1.1); }
+  .play-btn-icon svg {
+    width: 24px; height: 24px;
+    fill: var(--dark-bg);
+    margin-left: 3px;
+  }
+
+  /* ── CARD INFO ── */
+  .card-info {
+    padding: 18px 22px 22px;
+  }
+  .card-title {
+    font-family: 'Outfit', sans-serif;
+    font-weight: 800;
+    font-size: 1.25rem;
+    margin-bottom: 6px;
+    letter-spacing: 0.5px;
+  }
+  .card-desc {
+    font-size: 0.88rem;
+    color: var(--text-dim);
+    line-height: 1.5;
+    font-weight: 300;
+  }
+  .card-tags {
+    display: flex;
+    gap: 8px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+  }
+  .tag {
+    font-size: 0.68rem;
+    padding: 4px 10px;
+    border-radius: 20px;
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+    color: var(--text-dim);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    font-weight: 600;
+  }
+
+  /* ── FOOTER ── */
+  .footer {
+    text-align: center;
+    padding: 30px 20px 40px;
+    color: var(--text-dim);
+    font-size: 0.8rem;
+    border-top: 1px solid var(--card-border);
+    max-width: 600px;
+    margin: 0 auto;
+    letter-spacing: 1px;
+  }
+  .footer a {
+    color: var(--neon-cyan);
+    text-decoration: none;
+  }
+
+  /* ── AMBIENT GLOW BLOBS ── */
+  .glow-blob {
+    position: fixed;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.07;
+    pointer-events: none;
+    z-index: -1;
+  }
+
+  /* ── RESPONSIVE ── */
+  @media (max-width: 700px) {
+    .games-grid { grid-template-columns: 1fr; padding: 0 16px 60px; }
+    .stats-bar { gap: 25px; }
+    .header { padding: 40px 16px 30px; }
+  }
+</style>
 </head>
 <body>
-    <div id="game-container">
-        <canvas id="game-canvas"></canvas>
-        
-        <!-- Title Screen -->
-        <div id="title-screen">
-            <h1 class="game-title">Sophia's Cat Stacker</h1>
-            
-            <div class="controls-panel">
-                <h2>How to Play</h2>
-                <div class="control-row">
-                    <div class="key-group">
-                        <span class="key">←</span>
-                        <span class="key">→</span>
-                    </div>
-                    <span class="control-desc">or</span>
-                    <div class="key-group">
-                        <span class="key">A</span>
-                        <span class="key">D</span>
-                    </div>
-                    <span class="control-desc">Switch lanes</span>
-                </div>
-                <div class="control-row">
-                    <div class="key-group">
-                        <span class="key wide">Click</span>
-                    </div>
-                    <span class="control-desc">Left/Right side of screen</span>
-                </div>
-                <div class="control-row">
-                    <div class="key-group">
-                        <span class="key wide">Swipe</span>
-                    </div>
-                    <span class="control-desc">Left/Right on touch screen</span>
-                </div>
-                <p class="goal-text">Collect yarn, avoid obstacles, build a bridge!</p>
-            </div>
-            
-            <div class="title-buttons">
-                <button id="start-btn">Start Game</button>
-                <button id="settings-btn">Settings</button>
-            </div>
-        </div>
-        
-        <!-- Settings Modal -->
-        <div id="settings-modal" class="hidden">
-            <div class="settings-content">
-                <h2 class="settings-title">Game Settings</h2>
-                
-                <div class="setting-row">
-                    <label for="yarn-density">Yarn Density</label>
-                    <div class="slider-container">
-                        <span class="slider-min">1x</span>
-                        <input type="range" id="yarn-density" min="1" max="50" value="1.5" step="0.5">
-                        <span class="slider-max">50x</span>
-                    </div>
-                    <span class="slider-value" id="yarn-density-value">1.5x</span>
-                </div>
-                
-                <div class="setting-row">
-                    <label for="obstacle-density">Obstacle Density</label>
-                    <div class="slider-container">
-                        <span class="slider-min">0x</span>
-                        <input type="range" id="obstacle-density" min="0" max="3" value="2" step="0.25">
-                        <span class="slider-max">3x</span>
-                    </div>
-                    <span class="slider-value" id="obstacle-density-value">2x</span>
-                </div>
-                
-                <div class="setting-row">
-                    <label for="cat-speed">Cat Speed</label>
-                    <div class="slider-container">
-                        <span class="slider-min">0.5x</span>
-                        <input type="range" id="cat-speed" min="0.5" max="3" value="1" step="0.25">
-                        <span class="slider-max">3x</span>
-                    </div>
-                    <span class="slider-value" id="cat-speed-value">1x</span>
-                </div>
-                
-                <div class="setting-row">
-                    <label for="starting-level">Starting Level</label>
-                    <div class="slider-container">
-                        <span class="slider-min">1</span>
-                        <input type="range" id="starting-level" min="1" max="20" value="1" step="1">
-                        <span class="slider-max">20</span>
-                    </div>
-                    <span class="slider-value" id="starting-level-value">1</span>
-                </div>
-                
-                <button id="settings-close-btn">Done</button>
-            </div>
-        </div>
-        
-        <!-- UI Overlay -->
-        <div id="ui-overlay">
-            <div id="yarn-counter">Yarn: <span id="yarn-count">0</span></div>
-            <div id="distance-counter">Distance: <span id="distance-count">0</span></div>
-        </div>
-        
-        <!-- Message Display -->
-        <div id="message-display" class="hidden"></div>
-        
-        <!-- Level Screen -->
-        <div id="level-screen" class="hidden">
-            <div class="level-announce">
-                <span class="level-label">Level</span>
-                <span id="level-number" class="level-number">1</span>
-            </div>
-        </div>
-        
-        <!-- Fail Screen -->
-        <div id="fail-screen" class="hidden">
-            <h1 class="fail-title">Level Failed!</h1>
-            <p class="fail-level">Level 1</p>
-            <div class="fail-stats"></div>
-            <div class="end-buttons">
-                <button id="retry-btn">Try Again</button>
-                <button id="quit-fail-btn" class="quit-btn">Main Menu</button>
-            </div>
-        </div>
-        
-        <!-- Success Screen -->
-        <div id="success-screen" class="hidden">
-            <h1 class="success-title">Level Complete!</h1>
-            <p class="success-level">Level 1 Complete!</p>
-            <div class="end-buttons">
-                <button id="next-level-btn">Next Level</button>
-                <button id="quit-success-btn" class="quit-btn">Main Menu</button>
-            </div>
-        </div>
-        
-        <!-- End Screen -->
-        <div id="end-screen" class="hidden">
-            <h1>Game Over!</h1>
-            <div id="score-breakdown"></div>
-            <button id="restart-btn">Play Again</button>
-            <p class="hint">Press R to restart</p>
-        </div>
+
+<!-- Ambient glow -->
+<div class="glow-blob" style="width:500px;height:500px;background:var(--neon-cyan);top:-150px;left:-100px;"></div>
+<div class="glow-blob" style="width:600px;height:600px;background:var(--neon-pink);bottom:-200px;right:-150px;"></div>
+<div class="glow-blob" style="width:400px;height:400px;background:var(--neon-purple);top:50%;left:50%;transform:translate(-50%,-50%);"></div>
+
+<!-- HEADER -->
+<header class="header">
+  <div class="logo">
+    <span class="logo-icon">🕹️</span><span class="arcade-text">ARCADE</span>
+  </div>
+  <p class="tagline">Browser games created by Sophia and Ethan</p>
+
+  <div class="stats-bar">
+    <div class="stat">
+      <div class="stat-val" id="game-count">5</div>
+      <div class="stat-label">Games</div>
     </div>
-    
-    <!-- Three.js -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
-    
-    <!-- Game Modules -->
-    <script type="module" src="js/main.js"></script>
+    <div class="stat">
+      <div class="stat-val">∞</div>
+      <div class="stat-label">Fun</div>
+    </div>
+    <div class="stat">
+      <div class="stat-val">0</div>
+      <div class="stat-label">Ads</div>
+    </div>
+  </div>
+</header>
+
+<!-- GAMES GRID -->
+<main class="games-grid" id="games-grid">
+
+  <!-- ═══ GAME CARD: Color Splat ═══ -->
+  <a href="./color-splat/" class="game-card" style="--accent: #A855F7; --thumb-bg: linear-gradient(135deg, #FF6B9D, #A855F7, #1E90FF);">
+    <div class="card-thumb" style="background: linear-gradient(135deg, #FF6B9D, #A855F7, #1E90FF);">
+      <!-- Replace with: <img src="./color-splat/screenshot.png" alt="Color Splat"> -->
+      <div class="thumb-placeholder">🎨</div>
+      <div class="play-overlay">
+        <div class="play-btn-icon" style="background: #A855F7;">
+          <svg viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19"/></svg>
+        </div>
+      </div>
+    </div>
+    <div class="card-info">
+      <div class="card-title">Color Splat!</div>
+      <div class="card-desc">Pop colorful bubbles as fast as you can to paint the screen. Build combos for massive points!</div>
+      <div class="card-tags">
+        <span class="tag">Clicker</span>
+        <span class="tag">Family</span>
+        <span class="tag">45 sec</span>
+      </div>
+    </div>
+  </a>
+
+  <!-- ═══ GAME CARD: Puppy Catcher ═══ -->
+  <a href="./puppy-catcher/" class="game-card" style="--accent: #FF8FAB; --thumb-bg: linear-gradient(180deg, #87CEEB, #E0F4FF, #5DBE4A);">
+    <div class="card-thumb" style="background: linear-gradient(180deg, #87CEEB, #E0F4FF, #5DBE4A);">
+      <div class="thumb-placeholder">🐶</div>
+      <div class="play-overlay">
+        <div class="play-btn-icon" style="background: #FF8FAB;">
+          <svg viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19"/></svg>
+        </div>
+      </div>
+    </div>
+    <div class="card-info">
+      <div class="card-title">Puppy Catcher!</div>
+      <div class="card-desc">Adorable puppies are falling from the sky! Move your basket to catch them before they hit the ground.</div>
+      <div class="card-tags">
+        <span class="tag">Arcade</span>
+        <span class="tag">Cute</span>
+        <span class="tag">60 sec</span>
+      </div>
+    </div>
+  </a>
+
+  <!-- ═══ GAME CARD: Smash Zone ═══ -->
+  <a href="./smash-zone/" class="game-card" style="--accent: #FF4757; --thumb-bg: linear-gradient(135deg, #0f0c29, #302b63, #24243e);">
+    <div class="card-thumb" style="background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);">
+      <div class="thumb-placeholder">💥</div>
+      <div class="play-overlay">
+        <div class="play-btn-icon" style="background: #FF4757;">
+          <svg viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19"/></svg>
+        </div>
+      </div>
+    </div>
+    <div class="card-info">
+      <div class="card-title">Smash Zone</div>
+      <div class="card-desc">Swing a wrecking ball on a chain to demolish structures of glass, wood, brick, and stone. Pure destruction.</div>
+      <div class="card-tags">
+        <span class="tag">Physics</span>
+        <span class="tag">Destruction</span>
+        <span class="tag">5 Levels</span>
+      </div>
+    </div>
+  </a>
+
+  <!-- ═══ GAME CARD: Cat Stacker ═══ -->
+  <a href="./cat-stacker/" class="game-card" style="--accent: #FFE14D; --thumb-bg: linear-gradient(135deg, #2d1b4e, #1a1a2e);">
+    <div class="card-thumb" style="background: linear-gradient(135deg, #2d1b4e, #1a1a2e);">
+      <div class="thumb-placeholder">🐱</div>
+      <div class="play-overlay">
+        <div class="play-btn-icon" style="background: #FFE14D;">
+          <svg viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19"/></svg>
+        </div>
+      </div>
+    </div>
+    <div class="card-info">
+      <div class="card-title">Cat Stacker</div>
+      <div class="card-desc">Stack cats as high as you can! How tall can your tower of cats go before it topples?</div>
+      <div class="card-tags">
+        <span class="tag">Stacking</span>
+        <span class="tag">Cats</span>
+        <span class="tag">Endless</span>
+      </div>
+    </div>
+  </a>
+
+  <!-- ═══ GAME CARD: Unicorn Game ═══ -->
+  <a href="./unicorn-game/" class="game-card" style="--accent: #BF40FF; --thumb-bg: linear-gradient(135deg, #ff9a9e, #fad0c4, #a18cd1);">
+    <div class="card-thumb" style="background: linear-gradient(135deg, #ff9a9e, #fad0c4, #a18cd1);">
+      <div class="thumb-placeholder">🦄</div>
+      <div class="play-overlay">
+        <div class="play-btn-icon" style="background: #BF40FF;">
+          <svg viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19"/></svg>
+        </div>
+      </div>
+    </div>
+    <div class="card-info">
+      <div class="card-title">Unicorn Game</div>
+      <div class="card-desc">A magical unicorn adventure. Gallop through rainbows and collect stars!</div>
+      <div class="card-tags">
+        <span class="tag">Adventure</span>
+        <span class="tag">Magic</span>
+      </div>
+    </div>
+  </a>
+
+</main>
+
+<!-- FOOTER -->
+<footer class="footer">
+  Made with 🤖 + ❤️ — all games run in your browser, no installs needed
+</footer>
+
+<script>
+  // Update game count dynamically
+  document.getElementById('game-count').textContent =
+    document.querySelectorAll('.game-card').length;
+</script>
 </body>
 </html>
-
-

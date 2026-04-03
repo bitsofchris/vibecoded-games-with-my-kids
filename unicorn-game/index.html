@@ -94,13 +94,14 @@ const MAX_JUMPS = 2;
 let state = 'menu'; // menu, playing, gameover
 let score, distance, speed, jumpCount, shakeTimer;
 let unicorn, obstacles, collectibles, particles, rainbowTrail, bgClouds, bgHills;
+let splashSlowTimer = 0;
 let highScore = parseInt(localStorage.getItem('unicornHigh') || '0');
 let frameCount = 0;
 let menuBob = 0;
 
 function init() {
   score = 0; distance = 0; speed = 4; jumpCount = 0; shakeTimer = 0;
-  frameCount = 0;
+  splashSlowTimer = 0; frameCount = 0;
   unicorn = { x: 120, y: GROUND_Y - 64, w: 80, h: 64, vy: 0, grounded: true, bobPhase: 0 };
   obstacles = [];
   collectibles = [];
@@ -139,28 +140,27 @@ function doJump() {
   }
 }
 
+function restartGame() {
+  init();
+  state = 'playing';
+  ensureAudio();
+}
+
 document.addEventListener('keydown', e => {
   if (e.code === 'Space' || e.code === 'ArrowUp') { e.preventDefault(); if (!jumpPressed) { jumpPressed = true; doJump(); } }
-  if (state === 'gameover' && e.code === 'Enter') { state = 'menu'; }
+  if (state === 'gameover' && (e.code === 'Enter' || e.code === 'Space')) { restartGame(); }
 });
 document.addEventListener('keyup', e => {
   if (e.code === 'Space' || e.code === 'ArrowUp') jumpPressed = false;
 });
-canvas.addEventListener('touchstart', e => { e.preventDefault(); doJump(); });
+canvas.addEventListener('touchstart', e => {
+  e.preventDefault();
+  if (state === 'gameover') { restartGame(); return; }
+  doJump();
+});
 canvas.addEventListener('touchend', e => { e.preventDefault(); });
 canvas.addEventListener('click', e => {
-  if (state === 'gameover') {
-    const rect = canvas.getBoundingClientRect();
-    const scaleX = W / rect.width;
-    const scaleY = H / rect.height;
-    const mx = (e.clientX - rect.left) * scaleX;
-    const my = (e.clientY - rect.top) * scaleY;
-    // Check if "Play Again" button was clicked
-    if (mx > W/2 - 90 && mx < W/2 + 90 && my > H/2 + 50 && my < H/2 + 90) {
-      state = 'menu';
-    }
-    return;
-  }
+  if (state === 'gameover') { restartGame(); return; }
   doJump();
 });
 
@@ -198,7 +198,7 @@ function spawnObstacle() {
 }
 
 function spawnCollectible() {
-  const type = Math.random() < 0.6 ? 'apple' : 'star';
+  const type = Math.random() < 0.3 ? 'apple' : 'star';
   const yBase = GROUND_Y - 64;
   const y = yBase - Math.random() * 120 - 30;
   collectibles.push({
@@ -214,8 +214,9 @@ function update() {
   frameCount++;
 
   // Progressive difficulty
-  speed = 4 + Math.floor(distance / 800) * 0.5;
-  if (speed > 10) speed = 10;
+  let baseSpeed = 4 + Math.floor(distance / 800) * 0.5;
+  if (baseSpeed > 10) baseSpeed = 10;
+  if (splashSlowTimer > 0) { splashSlowTimer--; speed = baseSpeed * 0.5; } else { speed = baseSpeed; }
   distance += speed;
 
   // Unicorn physics
@@ -248,7 +249,7 @@ function update() {
   collectibleTimer -= speed;
   if (collectibleTimer <= 0) {
     spawnCollectible();
-    collectibleTimer = 80 + Math.random() * 120;
+    collectibleTimer = 50 + Math.random() * 80;
   }
 
   // Update obstacles
@@ -278,8 +279,17 @@ function update() {
         gameOver(); return;
       }
     } else if (o.type === 'water') {
-      if (ux + uw > o.x + 8 && ux < o.x + o.w - 8 && unicorn.y + unicorn.h >= GROUND_Y - 2) {
-        gameOver(); return;
+      if (!o.splashed && ux + uw > o.x + 8 && ux < o.x + o.w - 8 && unicorn.y + unicorn.h >= GROUND_Y - 2) {
+        o.splashed = true;
+        splashSlowTimer = 30;
+        // Splash particles
+        for (let i = 0; i < 12; i++) {
+          particles.push({
+            x: unicorn.x + unicorn.w / 2, y: GROUND_Y,
+            vx: (Math.random() - 0.5) * 6, vy: -Math.random() * 6 - 2,
+            life: 0.8, maxLife: 0.8, emoji: '💧', size: 10 + Math.random() * 8
+          });
+        }
       }
     }
   }
@@ -312,7 +322,6 @@ function update() {
 function gameOver() {
   state = 'gameover';
   playSound('die');
-  shakeTimer = 12;
   if (score > highScore) {
     highScore = score;
     localStorage.setItem('unicornHigh', highScore.toString());
@@ -636,7 +645,7 @@ function drawGameOver() {
   ctx.fill();
   ctx.fillStyle = '#fff';
   ctx.font = 'bold 18px "Fredoka One", sans-serif';
-  ctx.fillText('Play Again', W / 2, H / 2 + 70);
+  ctx.fillText('Tap to Play Again', W / 2, H / 2 + 70);
 }
 
 function roundRect(ctx, x, y, w, h, r) {

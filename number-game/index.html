@@ -402,6 +402,7 @@
 </style>
 </head>
 <body>
+<a href="../" style="position:fixed;top:12px;left:12px;z-index:1000;text-decoration:none;font-size:28px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;touch-action:manipulation;" aria-label="Back to Arcade">🏠</a>
 <h1>Ethan's Number Blocks! 🧱</h1>
 
 <div class="mode-tabs">
@@ -424,10 +425,10 @@
   <div id="word"></div>
   <div id="blocks-area"></div>
   <div id="counting-buttons">
-    <button style="background:#e74c3c" onclick="addCount(1)">➕ 1</button>
-    <button style="background:#3498db" onclick="addCount(-1)">➖ 1</button>
-    <button style="background:#27ae60" onclick="addCount(10)">➕ 10</button>
-    <button style="background:#16a085" onclick="addCount(-10)">➖ 10</button>
+    <button style="background:#e74c3c" data-repeat="addCount" data-arg="1">➕ 1</button>
+    <button style="background:#3498db" data-repeat="addCount" data-arg="-1">➖ 1</button>
+    <button style="background:#27ae60" data-repeat="addCount" data-arg="10">➕ 10</button>
+    <button style="background:#16a085" data-repeat="addCount" data-arg="-10">➖ 10</button>
     <button style="background:#f39c12" onclick="doSurprise()">🎉 Surprise!</button>
     <button style="background:#9b59b6" onclick="count=0;updateCountDisplay()">🔄 Reset</button>
   </div>
@@ -450,9 +451,9 @@
   <div id="big-next-label">Next: 10</div>
   <div id="scale-visual"></div>
   <div id="big-buttons">
-    <button style="background:#e74c3c" onclick="bigStep(1)">→ BIGGER!</button>
+    <button style="background:#e74c3c" data-repeat="bigStep" data-arg="1">→ BIGGER!</button>
     <button style="background:#f39c12" onclick="bigJump()">⬆ JUMP!</button>
-    <button style="background:#3498db" onclick="bigStep(-1)">← smaller</button>
+    <button style="background:#3498db" data-repeat="bigStep" data-arg="-1">← smaller</button>
     <button style="background:#9b59b6" onclick="bigReset()">🔄 Reset</button>
   </div>
 </div>
@@ -1029,6 +1030,39 @@ document.addEventListener('keydown', (e) => {
     else if (e.key === ' ') { e.preventDefault(); launchConfetti(); }
   }
 });
+
+// ===== HOLD-TO-REPEAT FOR BUTTONS =====
+(function() {
+  const actions = { addCount, bigStep };
+  let holdTimer = null;
+  let repeatInterval = null;
+
+  function startHold(btn) {
+    const fn = actions[btn.dataset.repeat];
+    const arg = Number(btn.dataset.arg);
+    if (!fn) return;
+    fn(arg); // fire once immediately
+    holdTimer = setTimeout(() => {
+      repeatInterval = setInterval(() => fn(arg), 100);
+    }, 400);
+  }
+
+  function stopHold() {
+    clearTimeout(holdTimer);
+    clearInterval(repeatInterval);
+    holdTimer = null;
+    repeatInterval = null;
+  }
+
+  document.querySelectorAll('[data-repeat]').forEach(btn => {
+    btn.addEventListener('pointerdown', (e) => { e.preventDefault(); startHold(btn); }, { passive: false });
+    btn.addEventListener('pointerup', stopHold);
+    btn.addEventListener('pointerleave', stopHold);
+    btn.addEventListener('pointercancel', stopHold);
+    // Prevent context menu on long-press
+    btn.addEventListener('contextmenu', (e) => e.preventDefault());
+  });
+})();
 
 // start!
 updateCountDisplay();

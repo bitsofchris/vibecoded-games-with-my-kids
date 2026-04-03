@@ -144,14 +144,117 @@
     margin-top: 4px;
   }
 
+  /* ── FEATURED SECTION ── */
+  .featured-section {
+    max-width: 1200px;
+    margin: 40px auto 0;
+    padding: 0 30px;
+  }
+  .section-label {
+    font-family: 'Press Start 2P', monospace;
+    font-size: clamp(0.65rem, 1.5vw, 0.8rem);
+    color: var(--neon-yellow);
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    margin-bottom: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+  }
+  .section-label::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: linear-gradient(90deg, var(--neon-yellow), transparent);
+    opacity: 0.2;
+  }
+
+  .featured-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 28px;
+  }
+
+  .game-card.featured {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    border: 1px solid rgba(255, 225, 77, 0.15);
+  }
+  .game-card.featured .card-thumb {
+    aspect-ratio: auto;
+    min-height: 250px;
+  }
+  .game-card.featured .card-info {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding: 30px 34px;
+  }
+  .game-card.featured .card-title {
+    font-size: 1.8rem;
+    margin-bottom: 10px;
+  }
+  .game-card.featured .card-desc {
+    font-size: 1rem;
+    line-height: 1.6;
+  }
+  .game-card.featured .card-tags {
+    margin-top: 18px;
+  }
+  .featured-badge {
+    display: inline-block;
+    font-family: 'Press Start 2P', monospace;
+    font-size: 0.55rem;
+    color: var(--dark-bg);
+    background: var(--neon-yellow);
+    padding: 4px 10px;
+    border-radius: 4px;
+    letter-spacing: 1px;
+    margin-bottom: 10px;
+  }
+  .game-card.featured:hover {
+    border-color: var(--neon-yellow);
+    box-shadow:
+      0 10px 50px rgba(255, 225, 77, 0.12),
+      0 0 0 1px rgba(255, 225, 77, 0.15),
+      inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  @media (max-width: 700px) {
+    .game-card.featured {
+      grid-template-columns: 1fr;
+    }
+    .game-card.featured .card-thumb {
+      min-height: 180px;
+      aspect-ratio: 16 / 9;
+    }
+    .game-card.featured .card-info {
+      padding: 18px 22px 22px;
+    }
+    .game-card.featured .card-title {
+      font-size: 1.3rem;
+    }
+    .featured-section { padding: 0 16px; }
+  }
+
+  /* ── ALL GAMES SECTION ── */
+  .all-games-section {
+    max-width: 1200px;
+    margin: 40px auto 0;
+    padding: 0 30px;
+  }
+  @media (max-width: 700px) {
+    .all-games-section { padding: 0 16px; }
+  }
+
   /* ── GAME GRID ── */
   .games-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
     gap: 28px;
     max-width: 1200px;
-    margin: 40px auto;
-    padding: 0 30px 80px;
+    margin: 0 auto;
+    padding: 0 0 80px;
   }
 
   /* ── GAME CARD ── */
@@ -314,6 +417,7 @@
     .stats-bar { gap: 25px; }
     .header { padding: 40px 16px 30px; }
   }
+
 </style>
 </head>
 <body>
@@ -346,13 +450,47 @@
   </div>
 </header>
 
-<!-- GAMES GRID -->
+<!-- FEATURED GAMES -->
+<section class="featured-section">
+  <div class="section-label">Featured</div>
+  <div class="featured-grid">
+
+    <!-- ═══ FEATURED: Smash Zone ═══ -->
+    <a href="./smash-zone/" class="game-card featured" style="--accent: #FF4757; --thumb-bg: linear-gradient(135deg, #0f0c29, #302b63, #24243e);">
+      <div class="card-thumb" style="background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);">
+        <div class="thumb-placeholder">💥</div>
+        <div class="play-overlay">
+          <div class="play-btn-icon" style="background: #FF4757;">
+            <svg viewBox="0 0 24 24"><polygon points="8,5 19,12 8,19"/></svg>
+          </div>
+        </div>
+      </div>
+      <div class="card-info">
+        <span class="featured-badge">FEATURED</span>
+        <div class="card-title">Smash Zone</div>
+        <div class="card-desc">Swing a wrecking ball to demolish structures of glass, wood, brick, stone, and squishy jelly. Upgrade your ball and power through 12 levels of destruction!</div>
+        <div class="card-tags">
+          <span class="tag">Physics</span>
+          <span class="tag">Destruction</span>
+          <span class="tag">Upgrades</span>
+          <span class="tag">12 Levels</span>
+        </div>
+      </div>
+    </a>
+
+  </div>
+</section>
+
+<!-- ALL GAMES -->
+<section class="all-games-section">
+  <div class="section-label">All Games</div>
+</section>
+
 <main class="games-grid" id="games-grid">
 
   <!-- ═══ GAME CARD: Color Splat ═══ -->
   <a href="./color-splat/" class="game-card" style="--accent: #A855F7; --thumb-bg: linear-gradient(135deg, #FF6B9D, #A855F7, #1E90FF);">
     <div class="card-thumb" style="background: linear-gradient(135deg, #FF6B9D, #A855F7, #1E90FF);">
-      <!-- Replace with: <img src="./color-splat/screenshot.png" alt="Color Splat"> -->
       <div class="thumb-placeholder">🎨</div>
       <div class="play-overlay">
         <div class="play-btn-icon" style="background: #A855F7;">
@@ -404,11 +542,11 @@
     </div>
     <div class="card-info">
       <div class="card-title">Smash Zone</div>
-      <div class="card-desc">Swing a wrecking ball on a chain to demolish structures of glass, wood, brick, and stone. Pure destruction.</div>
+      <div class="card-desc">Swing a wrecking ball to demolish structures. Upgrade your ball through 12 levels of destruction!</div>
       <div class="card-tags">
         <span class="tag">Physics</span>
         <span class="tag">Destruction</span>
-        <span class="tag">5 Levels</span>
+        <span class="tag">12 Levels</span>
       </div>
     </div>
   </a>

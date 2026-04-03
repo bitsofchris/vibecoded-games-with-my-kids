@@ -186,15 +186,8 @@ function makeCollectParticles(x, y, type) {
 let obstacleTimer = 0, collectibleTimer = 0;
 
 function spawnObstacle() {
-  const types = ['rock', 'water'];
-  const type = types[Math.floor(Math.random() * types.length)];
-  if (type === 'rock') {
-    const h = 30 + Math.random() * 30;
-    obstacles.push({ type: 'rock', x: W + 20, y: GROUND_Y - h, w: 35 + Math.random() * 20, h, color: '#6b5b7b' });
-  } else {
-    const w = 80 + Math.random() * 60;
-    obstacles.push({ type: 'water', x: W + 20, y: GROUND_Y, w, h: 20 });
-  }
+  const w = 80 + Math.random() * 60;
+  obstacles.push({ type: 'water', x: W + 20, y: GROUND_Y, w, h: 20 });
 }
 
 function spawnCollectible() {
@@ -274,11 +267,7 @@ function update() {
   // Collision: obstacles
   const ux = unicorn.x + 15, uy = unicorn.y + 8, uw = unicorn.w - 30, uh = unicorn.h - 12;
   for (const o of obstacles) {
-    if (o.type === 'rock') {
-      if (ux < o.x + o.w && ux + uw > o.x && uy + uh > o.y && uy < o.y + o.h) {
-        gameOver(); return;
-      }
-    } else if (o.type === 'water') {
+    if (o.type === 'water') {
       if (!o.splashed && ux + uw > o.x + 8 && ux < o.x + o.w - 8 && unicorn.y + unicorn.h >= GROUND_Y - 2) {
         o.splashed = true;
         splashSlowTimer = 30;
@@ -436,26 +425,7 @@ function drawUnicorn() {
 
 function drawObstacles() {
   obstacles.forEach(o => {
-    if (o.type === 'rock') {
-      // Rock with shading
-      ctx.fillStyle = '#5a4a6a';
-      ctx.beginPath();
-      ctx.moveTo(o.x + o.w * 0.1, o.y + o.h);
-      ctx.lineTo(o.x + o.w * 0.25, o.y);
-      ctx.lineTo(o.x + o.w * 0.6, o.y + o.h * 0.15);
-      ctx.lineTo(o.x + o.w * 0.85, o.y + o.h * 0.1);
-      ctx.lineTo(o.x + o.w, o.y + o.h);
-      ctx.closePath();
-      ctx.fill();
-      ctx.fillStyle = '#7a6a8a';
-      ctx.beginPath();
-      ctx.moveTo(o.x + o.w * 0.25, o.y);
-      ctx.lineTo(o.x + o.w * 0.6, o.y + o.h * 0.15);
-      ctx.lineTo(o.x + o.w * 0.5, o.y + o.h);
-      ctx.lineTo(o.x + o.w * 0.1, o.y + o.h);
-      ctx.closePath();
-      ctx.fill();
-    } else if (o.type === 'water') {
+    if (o.type === 'water') {
       // Animated water
       ctx.fillStyle = 'rgba(80, 120, 255, 0.7)';
       ctx.fillRect(o.x, o.y, o.w, o.h);

@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ethan's Number Blocks!</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1a2e;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    overflow-y: auto;
+    overflow-x: hidden;
+    min-height: 100vh;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+  }
+  h1 {
+    color: gold;
+    font-size: 32px;
+    padding: 10px;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+  }
+  .mode-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 10px;
+    margin-bottom: 10px;
+  }
+  .mode-tab {
+    font-size: 20px;
+    padding: 8px 24px;
+    border: 3px solid rgba(255,255,255,0.3);
+    border-radius: 30px;
+    background: transparent;
+    color: #aaa;
+    cursor: pointer;
+    font-weight: bold;
+  }
+  .mode-tab.active {
+    border-color: gold;
+    color: gold;
+    background: rgba(255,215,0,0.1);
+  }
+  #keys-help {
+    color: #aaa;
+    font-size: 18px;
+    margin-bottom: 5px;
+  }
+
+  /* ===== COUNTING MODE ===== */
+  #counting-mode { display: block; }
+  #big-number {
+    font-size: 100px;
+    color: white;
+    margin: 5px;
+    text-shadow: 0 0 30px rgba(255,255,255,0.5);
+  }
+  #big-number.bounce { animation: numberBounce 0.4s ease; }
+  @keyframes numberBounce {
+    0% { transform: scale(1); }
+    40% { transform: scale(1.4); }
+    100% { transform: scale(1); }
+  }
+  #word {
+    font-size: 28px;
+    color: #ffcc00;
+    margin-bottom: 10px;
+    min-height: 36px;
+  }
+  #blocks-area {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 16px;
+    padding: 10px 20px;
+    min-height: 100px;
+  }
+  .ten-group {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 4px;
+    padding: 8px;
+    border-radius: 12px;
+    background: rgba(255,255,255,0.08);
+    border: 2px solid rgba(255,255,255,0.15);
+    position: relative;
+  }
+  .ten-group-label {
+    position: absolute;
+    bottom: -22px;
+    left: 50%;
+    transform: translateX(-50%);
+    color: rgba(255,255,255,0.5);
+    font-size: 14px;
+    font-weight: bold;
+    white-space: nowrap;
+  }
+  .block {
+    width: 44px;
+    height: 44px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 18px;
+    font-weight: bold;
+    color: white;
+    text-shadow: 1px 1px 2px rgba(0,0,0,0.4);
+    cursor: pointer;
+    box-shadow: 0 3px 0 rgba(0,0,0,0.3), 0 4px 10px rgba(0,0,0,0.3);
+    transition: transform 0.15s;
+    animation: blockAppear 0.3s ease backwards;
+  }
+  .block.empty {
+    background: rgba(255,255,255,0.05) !important;
+    box-shadow: none;
+    border: 2px dashed rgba(255,255,255,0.1);
+    color: transparent;
+    cursor: default;
+  }
+  .block:not(.empty):hover { transform: scale(1.15) rotate(5deg); }
+  .block:not(.empty):active { transform: scale(0.95); }
+  @keyframes blockAppear {
+    0% { transform: scale(0) rotate(-20deg); opacity: 0; }
+    100% { transform: scale(1) rotate(0deg); opacity: 1; }
+  }
+  .wiggle { animation: wiggleAnim 0.5s ease; }
+  @keyframes wiggleAnim {
+    0% { transform: rotate(0deg); }
+    25% { transform: rotate(10deg) scale(1.1); }
+    50% { transform: rotate(-10deg) scale(1.1); }
+    75% { transform: rotate(5deg); }
+    100% { transform: rotate(0deg); }
+  }
+  #counting-buttons {
+    margin-top: 30px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+  button {
+    font-size: 22px;
+    padding: 10px 22px;
+    border: none;
+    border-radius: 50px;
+    cursor: pointer;
+    color: white;
+    font-weight: bold;
+    box-shadow: 0 4px 0 rgba(0,0,0,0.3);
+    transition: transform 0.1s;
+  }
+  button:active {
+    transform: translateY(3px);
+    box-shadow: 0 1px 0 rgba(0,0,0,0.3);
+  }
+  button {
+    touch-action: manipulation;
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* ===== BIG NUMBER MODE ===== */
+  #big-mode { display: none; }
+  #big-mode-number {
+    font-size: 48px;
+    color: white;
+    margin: 10px 20px;
+    font-weight: bold;
+    text-shadow: 0 0 40px rgba(255,255,255,0.4);
+    word-break: break-all;
+    line-height: 1.2;
+    transition: color 0.3s;
+  }
+  #big-mode-name {
+    font-size: 32px;
+    color: gold;
+    margin: 5px 20px;
+    font-weight: bold;
+  }
+  #milestone-emoji {
+    font-size: 80px;
+    margin: 10px;
+    animation: emojiPulse 2s ease-in-out infinite;
+  }
+  @keyframes emojiPulse {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.15); }
+  }
+  #milestone-desc {
+    font-size: 24px;
+    color: #ccc;
+    margin: 5px 30px;
+    line-height: 1.4;
+  }
+  #scale-visual {
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    gap: 6px;
+    margin: 20px auto;
+    padding: 0 30px;
+    height: 220px;
+    max-width: 900px;
+  }
+  .scale-bar {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    transition: all 0.3s ease;
+  }
+  .scale-bar-inner {
+    border-radius: 8px 8px 4px 4px;
+    transition: all 0.3s ease;
+    min-width: 10px;
+  }
+  .scale-bar-label {
+    color: rgba(255,255,255,0.6);
+    font-size: 11px;
+    margin-top: 4px;
+    white-space: nowrap;
+  }
+  .scale-bar-current .scale-bar-inner {
+    box-shadow: 0 0 20px rgba(255,255,255,0.4);
+  }
+  .scale-bar-current .scale-bar-label {
+    color: gold;
+    font-weight: bold;
+    font-size: 13px;
+  }
+  #big-progress {
+    width: 80%;
+    max-width: 500px;
+    height: 16px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 10px;
+    margin: 15px auto;
+    overflow: hidden;
+  }
+  #big-progress-fill {
+    height: 100%;
+    border-radius: 10px;
+    background: linear-gradient(90deg, #e74c3c, #f39c12, #f1c40f);
+    transition: width 0.2s ease;
+  }
+  #big-next-label {
+    color: rgba(255,255,255,0.4);
+    font-size: 16px;
+    margin-bottom: 10px;
+  }
+  #big-buttons {
+    margin-top: 15px;
+    margin-bottom: 15px;
+    display: flex;
+    justify-content: center;
+    gap: 15px;
+    flex-wrap: wrap;
+  }
+
+  /* ===== SHARED ===== */
+  #confetti-container {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 999;
+  }
+  .confetti {
+    position: absolute;
+    width: 12px;
+    height: 12px;
+    border-radius: 2px;
+    animation: confettiFall 2s ease-out forwards;
+  }
+  @keyframes confettiFall {
+    0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+    100% { transform: translateY(100vh) rotate(720deg); opacity: 0; }
+  }
+  .star-burst {
+    position: fixed;
+    font-size: 60px;
+    animation: starFly 1s ease-out forwards;
+    pointer-events: none;
+    z-index: 998;
+  }
+  @keyframes starFly {
+    0% { transform: scale(0) rotate(0deg); opacity: 1; }
+    50% { transform: scale(1.5) rotate(180deg); opacity: 1; }
+    100% { transform: scale(0) rotate(360deg); opacity: 0; }
+  }
+  @keyframes bgFlash {
+    0% { background: #1a1a2e; }
+    50% { background: #2a1a3e; }
+    100% { background: #1a1a2e; }
+  }
+
+  /* ===== BLACK HOLE ENDGAME ===== */
+  #black-hole-overlay {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    z-index: 2000;
+    display: none;
+    pointer-events: none;
+  }
+  #black-hole-overlay.active {
+    display: block;
+    pointer-events: all;
+  }
+  #black-hole-circle {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 0; height: 0;
+    border-radius: 50%;
+    background: radial-gradient(circle, #000 60%, #1a0a2e 80%, transparent 100%);
+    transform: translate(-50%, -50%);
+    transition: none;
+  }
+  #black-hole-ring {
+    position: absolute;
+    top: 50%; left: 50%;
+    width: 0; height: 0;
+    border-radius: 50%;
+    border: 4px solid transparent;
+    transform: translate(-50%, -50%);
+    box-sizing: border-box;
+  }
+  #infinity-container {
+    position: absolute;
+    top: 50%; left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0;
+    text-align: center;
+  }
+  #infinity-symbol {
+    font-size: 200px;
+    background: linear-gradient(135deg, #e74c3c, #f39c12, #f1c40f, #2ecc71, #3498db, #9b59b6, #e91e63);
+    background-size: 400% 400%;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    animation: infinityRainbow 3s ease infinite;
+    text-shadow: none;
+  }
+  @keyframes infinityRainbow {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+  }
+  #infinity-text {
+    font-size: 42px;
+    color: white;
+    font-weight: bold;
+    margin-top: -20px;
+    text-shadow: 0 0 30px rgba(255,255,255,0.5);
+  }
+  #infinity-sub {
+    font-size: 22px;
+    color: #aaa;
+    margin-top: 10px;
+  }
+  #play-again-btn {
+    margin-top: 30px;
+    font-size: 28px;
+    padding: 15px 40px;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(135deg, #e74c3c, #9b59b6);
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+    box-shadow: 0 0 30px rgba(155,89,182,0.5);
+    animation: playAgainPulse 2s ease-in-out infinite;
+  }
+  @keyframes playAgainPulse {
+    0%, 100% { transform: scale(1); box-shadow: 0 0 30px rgba(155,89,182,0.5); }
+    50% { transform: scale(1.05); box-shadow: 0 0 50px rgba(155,89,182,0.8); }
+  }
+  @keyframes screenShake {
+    0%, 100% { transform: translate(0,0); }
+    10% { transform: translate(-5px, 3px); }
+    20% { transform: translate(4px, -4px); }
+    30% { transform: translate(-3px, -2px); }
+    40% { transform: translate(5px, 5px); }
+    50% { transform: translate(-4px, 2px); }
+    60% { transform: translate(3px, -5px); }
+    70% { transform: translate(-5px, 4px); }
+    80% { transform: translate(2px, -3px); }
+    90% { transform: translate(-3px, 5px); }
+  }
+  .screen-shake {
+    animation: screenShake 0.5s ease infinite;
+  }
+  .suck-in {
+    transition: all 1.5s cubic-bezier(0.5, 0, 1, 0.5) !important;
+    transform: scale(0) !important;
+    opacity: 0 !important;
+  }
+</style>
+</head>
+<body>
+<h1>Ethan's Number Blocks! 🧱</h1>
+
+<div class="mode-tabs">
+  <button class="mode-tab active" id="tab-counting" onclick="switchMode('counting')">🔢 Counting</button>
+  <button class="mode-tab" id="tab-big" onclick="switchMode('big')">🚀 BIG Numbers!</button>
+</div>
+
+<!-- ===== COUNTING MODE ===== -->
+<div id="counting-mode">
+  <div id="keys-help">
+    <span style="color:#e74c3c;">→ +1</span> &nbsp;
+    <span style="color:#3498db;">← -1</span> &nbsp;
+    <span style="color:#27ae60;">↑ +10</span> &nbsp;
+    <span style="color:#16a085;">↓ -10</span> &nbsp;
+    <span style="color:#f39c12;">S = Surprise</span> &nbsp;
+    <span style="color:#2ecc71;">Space = Wiggle!</span> &nbsp;
+    <span style="color:#9b59b6;">R = Reset</span>
+  </div>
+  <div id="big-number">0</div>
+  <div id="word"></div>
+  <div id="blocks-area"></div>
+  <div id="counting-buttons">
+    <button style="background:#e74c3c" onclick="addCount(1)">➕ 1</button>
+    <button style="background:#3498db" onclick="addCount(-1)">➖ 1</button>
+    <button style="background:#27ae60" onclick="addCount(10)">➕ 10</button>
+    <button style="background:#16a085" onclick="addCount(-10)">➖ 10</button>
+    <button style="background:#f39c12" onclick="doSurprise()">🎉 Surprise!</button>
+    <button style="background:#9b59b6" onclick="count=0;updateCountDisplay()">🔄 Reset</button>
+  </div>
+</div>
+
+<!-- ===== BIG NUMBER MODE ===== -->
+<div id="big-mode">
+  <div id="keys-help-big" style="color: #aaa; font-size: 18px; margin-bottom: 5px;">
+    <span style="color:#e74c3c;">→ BIGGER!</span> &nbsp;
+    <span style="color:#f39c12;">↑ JUMP!</span> &nbsp;
+    <span style="color:#3498db;">← smaller</span> &nbsp;
+    <span style="color:#2ecc71;">Space = Celebrate!</span> &nbsp;
+    <span style="color:#9b59b6;">R = Reset</span>
+  </div>
+  <div id="milestone-emoji">👤</div>
+  <div id="big-mode-number">1</div>
+  <div id="big-mode-name">ONE</div>
+  <div id="milestone-desc">Just one you!</div>
+  <div id="big-progress"><div id="big-progress-fill" style="width:0%"></div></div>
+  <div id="big-next-label">Next: 10</div>
+  <div id="scale-visual"></div>
+  <div id="big-buttons">
+    <button style="background:#e74c3c" onclick="bigStep(1)">→ BIGGER!</button>
+    <button style="background:#f39c12" onclick="bigJump()">⬆ JUMP!</button>
+    <button style="background:#3498db" onclick="bigStep(-1)">← smaller</button>
+    <button style="background:#9b59b6" onclick="bigReset()">🔄 Reset</button>
+  </div>
+</div>
+
+<div id="confetti-container"></div>
+
+<!-- ===== BLACK HOLE ENDGAME ===== -->
+<div id="black-hole-overlay">
+  <div id="black-hole-ring"></div>
+  <div id="black-hole-circle"></div>
+  <div id="infinity-container">
+    <div id="infinity-symbol">&#8734;</div>
+    <div id="infinity-text">You found INFINITY!</div>
+    <div id="infinity-sub">Beyond all numbers... beyond everything... forever and ever!</div>
+    <button id="play-again-btn" onclick="playAgain()">🚀 Play Again!</button>
+  </div>
+</div>
+
+<script>
+// ===== MODE SWITCHING =====
+let currentMode = 'counting';
+function switchMode(mode) {
+  currentMode = mode;
+  document.getElementById('counting-mode').style.display = mode === 'counting' ? 'block' : 'none';
+  document.getElementById('big-mode').style.display = mode === 'big' ? 'block' : 'none';
+  document.getElementById('tab-counting').classList.toggle('active', mode === 'counting');
+  document.getElementById('tab-big').classList.toggle('active', mode === 'big');
+  if (mode === 'big') updateBigDisplay();
+}
+
+// ===== COUNTING MODE =====
+let count = 0;
+const maxBlocks = 100;
+const groupColors = [
+  '#e74c3c','#3498db','#f1c40f','#2ecc71','#e67e22',
+  '#9b59b6','#1abc9c','#e91e63','#ff6b6b','#2980b9',
+];
+const words = [
+  'zero','one','two','three','four','five',
+  'six','seven','eight','nine','ten',
+  'eleven','twelve','thirteen','fourteen','fifteen',
+  'sixteen','seventeen','eighteen','nineteen','twenty'
+];
+const funFacts = [
+  '🐙 An octopus has 8 arms!',
+  '🦕 Dinosaurs lived millions of years ago!',
+  '⭐ The sun is a giant star!',
+  '🐧 Penguins can\'t fly but they swim super fast!',
+  '🌈 A rainbow has 7 colors!',
+  '🐕 Dogs can hear sounds we can\'t!',
+  '🦷 Sharks have thousands of teeth!',
+  '🐘 Elephants are the biggest land animals!',
+  '🌙 The moon has no air!',
+  '🐸 Frogs drink water through their skin!',
+  '❄️ Every snowflake is different!',
+  '🦒 Giraffes are the tallest animals!',
+  '🐝 Bees do a dance to talk to each other!',
+  '🎨 Red + Blue = Purple!',
+  '🎨 Red + Yellow = Orange!',
+  '🐢 Some turtles live over 100 years!',
+];
+
+function updateCountDisplay() {
+  const numEl = document.getElementById('big-number');
+  numEl.textContent = count;
+  numEl.classList.remove('bounce');
+  void numEl.offsetWidth;
+  numEl.classList.add('bounce');
+  document.getElementById('word').textContent = count <= 20 ? words[count].toUpperCase() : count;
+  speak(String(count));
+  renderBlocks();
+  if (count > 0 && count % 10 === 0) { launchConfetti(); showStar(); }
+  if (count === 100) { for (let i=0;i<5;i++) setTimeout(()=>{launchConfetti();showStar();},i*300); }
+}
+
+function renderBlocks() {
+  const area = document.getElementById('blocks-area');
+  area.innerHTML = '';
+  if (count === 0) return;
+  const fullGroups = Math.floor(count / 10);
+  const remainder = count % 10;
+  const totalGroups = fullGroups + (remainder > 0 ? 1 : 0);
+  for (let g = 0; g < totalGroups; g++) {
+    const group = document.createElement('div');
+    group.className = 'ten-group';
+    const color = groupColors[g % groupColors.length];
+    const isLastPartial = (g === fullGroups && remainder > 0);
+    const filledInGroup = isLastPartial ? remainder : 10;
+    for (let i = 0; i < 10; i++) {
+      const block = document.createElement('div');
+      const gi = g * 10 + i;
+      block.className = 'block';
+      if (i < filledInGroup) {
+        block.style.background = color;
+        block.style.animationDelay = (gi * 0.02) + 's';
+        block.textContent = gi + 1;
+        block.addEventListener('click', () => {
+          block.classList.remove('wiggle'); void block.offsetWidth; block.classList.add('wiggle');
+          speak(String(gi + 1));
+        });
+      } else { block.classList.add('empty'); }
+      group.appendChild(block);
+    }
+    const label = document.createElement('div');
+    label.className = 'ten-group-label';
+    label.textContent = (g*10+1) + '-' + (g*10+filledInGroup);
+    group.appendChild(label);
+    area.appendChild(group);
+  }
+}
+
+function addCount(n) {
+  count = Math.max(0, Math.min(maxBlocks, count + n));
+  updateCountDisplay();
+}
+
+function doSurprise() {
+  const fact = funFacts[Math.floor(Math.random() * funFacts.length)];
+  document.getElementById('word').textContent = fact;
+  launchConfetti();
+  speak(fact.replace(/[^\w\s!'.]/g, ''));
+}
+
+// ===== BIG NUMBER MODE =====
+const milestones = [
+  { exp: 0,  emoji: '👤', name: 'ONE',               desc: 'Just one you!', color: '#e74c3c' },
+  { exp: 1,  emoji: '🖐️', name: 'TEN',               desc: 'All your fingers!', color: '#ff6b6b' },
+  { exp: 2,  emoji: '🏫', name: 'HUNDRED',            desc: 'Kids in a big school!', color: '#e67e22' },
+  { exp: 3,  emoji: '🏘️', name: 'THOUSAND',           desc: 'People in a small town!', color: '#f39c12' },
+  { exp: 4,  emoji: '🏟️', name: 'TEN THOUSAND',       desc: 'A stadium full of people!', color: '#f1c40f' },
+  { exp: 5,  emoji: '🏙️', name: 'HUNDRED THOUSAND',   desc: 'A whole city!', color: '#2ecc71' },
+  { exp: 6,  emoji: '🌆', name: 'MILLION',            desc: 'A million people! A mega-city!', color: '#1abc9c' },
+  { exp: 7,  emoji: '🗽', name: 'TEN MILLION',        desc: 'Everyone in New York City!', color: '#3498db' },
+  { exp: 8,  emoji: '🍪', name: 'HUNDRED MILLION',    desc: 'More cookies than you could EVER eat!', color: '#2980b9' },
+  { exp: 9,  emoji: '⏰', name: 'BILLION',            desc: 'Seconds in 32 years! You\'d count for a lifetime!', color: '#9b59b6' },
+  { exp: 10, emoji: '🌍', name: 'TEN BILLION',        desc: 'More than all people on Earth!', color: '#8e44ad' },
+  { exp: 11, emoji: '⭐', name: 'HUNDRED BILLION',    desc: 'Stars in our Milky Way galaxy!', color: '#e74c3c' },
+  { exp: 12, emoji: '🍕', name: 'TRILLION',           desc: 'A stack of pizzas to the MOON!', color: '#e91e63' },
+  { exp: 13, emoji: '🧬', name: 'TEN TRILLION',       desc: 'Cells in your body! You\'re made of these!', color: '#ff6b6b' },
+  { exp: 14, emoji: '🐜', name: 'HUNDRED TRILLION',   desc: 'All the ants on Earth right now!', color: '#e67e22' },
+  { exp: 15, emoji: '🔴', name: 'QUADRILLION',        desc: 'Red blood cells in 50 people!', color: '#f39c12' },
+  { exp: 16, emoji: '🃏', name: 'TEN QUADRILLION',    desc: 'Playing cards to build a bridge to Mars!', color: '#f1c40f' },
+  { exp: 17, emoji: '🏖️', name: 'HUNDRED QUADRILLION',desc: 'Grains of sand on ALL the beaches!', color: '#2ecc71' },
+  { exp: 18, emoji: '🌊', name: 'QUINTILLION',        desc: 'Cups of water in ALL the oceans!', color: '#1abc9c' },
+  { exp: 19, emoji: '💧', name: 'TEN QUINTILLION',    desc: 'Drops of water that fall as rain each year!', color: '#3498db' },
+  { exp: 20, emoji: '🌟', name: 'HUNDRED QUINTILLION',desc: 'Grains of sand on Earth × 1000!', color: '#2980b9' },
+  { exp: 21, emoji: '✨', name: 'SEXTILLION',         desc: 'Stars in the observable universe!', color: '#9b59b6' },
+  { exp: 22, emoji: '🔬', name: 'TEN SEXTILLION',     desc: 'Atoms in a penny!', color: '#8e44ad' },
+  { exp: 23, emoji: '⚗️', name: 'HUNDRED SEXTILLION', desc: 'Atoms in a glass of water!', color: '#e74c3c' },
+  { exp: 24, emoji: '🧪', name: 'SEPTILLION',         desc: 'Molecules in a single breath of air!', color: '#e91e63' },
+  { exp: 25, emoji: '💎', name: 'TEN SEPTILLION',     desc: 'Atoms in a big diamond!', color: '#ff6b6b' },
+  { exp: 27, emoji: '🧑', name: 'OCTILLION',          desc: 'Atoms in YOUR body!', color: '#e67e22' },
+  { exp: 30, emoji: '🦠', name: 'NONILLION',          desc: 'Bacteria that EVER lived on Earth!', color: '#f39c12' },
+  { exp: 33, emoji: '💫', name: 'DECILLION',          desc: 'Bigger than a decillion! So many zeros!', color: '#f1c40f' },
+  { exp: 36, emoji: '🔥', name: 'UNDECILLION',        desc: 'Possible ways to shuffle 20 decks of cards!', color: '#2ecc71' },
+  { exp: 40, emoji: '☀️', name: 'TEN DUODECILLION',   desc: 'Atoms in the SUN!', color: '#1abc9c' },
+  { exp: 45, emoji: '🪐', name: 'A REALLY BIG NUMBER',desc: 'Atoms in Jupiter × a million!', color: '#3498db' },
+  { exp: 50, emoji: '🌌', name: 'WAY BIGGER',         desc: 'Atoms in a BILLION Earths!', color: '#2980b9' },
+  { exp: 55, emoji: '🌀', name: 'SUPER HUGE',         desc: 'Bigger than most scientists ever need!', color: '#9b59b6' },
+  { exp: 60, emoji: '🤯', name: 'MIND-BLOWING',       desc: 'Your brain can\'t even picture this!', color: '#8e44ad' },
+  { exp: 67, emoji: '🫠', name: 'UNIMAGINABLE',       desc: 'Atoms in our ENTIRE galaxy!', color: '#e74c3c' },
+  { exp: 70, emoji: '💥', name: 'COSMIC',             desc: 'Grains of sand to fill a billion solar systems!', color: '#e91e63' },
+  { exp: 78, emoji: '🫧', name: 'NEARLY EVERYTHING',  desc: 'Getting close to all atoms in the universe!', color: '#ff6b6b' },
+  { exp: 80, emoji: '🌌', name: 'ALL THE ATOMS!',     desc: 'Atoms in the OBSERVABLE UNIVERSE!', color: '#e67e22' },
+  { exp: 85, emoji: '🤯', name: 'BEYOND ATOMS',       desc: 'MORE than all atoms that exist!', color: '#f39c12' },
+  { exp: 90, emoji: '🚀', name: 'HYPER NUMBER',       desc: 'Past everything real! Pure imagination now!', color: '#f1c40f' },
+  { exp: 95, emoji: '👑', name: 'ALMOST A GOOGOL',    desc: 'So close to the legendary GOOGOL!', color: '#2ecc71' },
+  { exp: 100,emoji: '🏆', name: 'G O O G O L ! ! !',  desc: 'A GOOGOL! 1 followed by 100 zeros! Google is named after this!', color: '#FFD700' },
+  { exp: 105,emoji: '🤪', name: 'BEYOND GOOGOL',      desc: 'You went PAST a googol! No one counts this high!', color: '#1abc9c' },
+  { exp: 110,emoji: '🦸', name: 'SUPER-GOOGOL',       desc: 'Even superheroes can\'t count this high!', color: '#3498db' },
+  { exp: 120,emoji: '🧙', name: 'WIZARD NUMBERS',     desc: 'Only wizards know numbers this big!', color: '#9b59b6' },
+  { exp: 150,emoji: '🌈', name: 'RAINBOW INFINITY',   desc: 'So big it wraps around the universe and back!', color: '#e91e63' },
+  { exp: 200,emoji: '🎆', name: 'MEGA ULTRA NUMBER',  desc: 'Two hundred zeros! Absolutely bonkers!', color: '#e74c3c' },
+  { exp: 250,emoji: '🏆', name: 'CHAMPION',           desc: 'The biggest number champion! 250 zeros!', color: '#FFD700' },
+  { exp: 300,emoji: '🐉', name: 'DRAGON NUMBER',      desc: 'Only a dragon could count this high!', color: '#2ecc71' },
+  { exp: 303,emoji: '🎯', name: 'CENTILLION',         desc: 'A CENTILLION! The biggest named number!', color: '#FF4500' },
+  { exp: 350,emoji: '🛸', name: 'ALIEN NUMBERS',      desc: 'Even aliens can\'t count this high!', color: '#1abc9c' },
+  { exp: 400,emoji: '💫', name: 'ETHAN\'S NUMBER',    desc: 'This number is so big, let\'s name it after YOU!', color: '#FFD700' },
+  { exp: 420,emoji: '🕳️', name: 'DANGER ZONE',       desc: 'Warning... something strange is happening...', color: '#666' },
+  { exp: 440,emoji: '🌑', name: 'DARKNESS GROWS',     desc: 'The numbers are getting too big... too powerful...', color: '#555' },
+  { exp: 460,emoji: '💀', name: 'POINT OF NO RETURN', desc: 'Turn back! A black hole is forming!', color: '#444' },
+  { exp: 480,emoji: '🕳️', name: 'BLACK HOLE WARNING', desc: 'THE BLACK HOLE IS PULLING EVERYTHING IN!', color: '#333' },
+  { exp: 500,emoji: '🕳️', name: 'THE BLACK HOLE',     desc: 'It swallowed everything...', color: '#000' },
+];
+
+let bigLevel = 0; // index into sub-steps
+let bigExp = 0;   // current exponent (10^bigExp)
+let bigSub = 0;   // sub-step within current magnitude (0-9)
+
+function getCurrentMilestone() {
+  let best = milestones[0];
+  for (const m of milestones) {
+    if (m.exp <= bigExp) best = m;
+    else break;
+  }
+  return best;
+}
+
+function getNextMilestone() {
+  for (const m of milestones) {
+    if (m.exp > bigExp) return m;
+  }
+  return null;
+}
+
+function formatBigNumber() {
+  if (bigExp === 0) return String(bigSub + 1);
+  if (bigExp <= 6) {
+    // Show actual number with commas
+    let n = (bigSub + 1) * Math.pow(10, bigExp - 1);
+    return n.toLocaleString();
+  }
+  // Scientific notation
+  return (bigSub + 1) + ' × 10<sup>' + (bigExp - 1) + '</sup>';
+}
+
+function formatBigNumberClean() {
+  if (bigExp === 0) return String(bigSub + 1);
+  return (bigSub + 1) + ' times 10 to the ' + (bigExp - 1);
+}
+
+function updateBigDisplay() {
+  const m = getCurrentMilestone();
+  const next = getNextMilestone();
+
+  document.getElementById('milestone-emoji').textContent = m.emoji;
+  document.getElementById('big-mode-number').innerHTML = formatBigNumber();
+  document.getElementById('big-mode-number').style.color = m.color;
+  document.getElementById('big-mode-name').textContent = m.name;
+  document.getElementById('big-mode-name').style.color = m.color;
+  document.getElementById('milestone-desc').textContent = m.desc;
+
+  // progress bar to next milestone
+  if (next) {
+    const range = next.exp - m.exp;
+    const progress = (bigExp - m.exp) / range;
+    document.getElementById('big-progress-fill').style.width = (progress * 100) + '%';
+    document.getElementById('big-next-label').textContent = 'Next: ' + next.emoji + ' ' + next.name;
+  } else {
+    document.getElementById('big-progress-fill').style.width = '100%';
+    document.getElementById('big-next-label').textContent = 'You reached the TOP! 🎉';
+  }
+
+  renderScaleBars(m);
+}
+
+function renderScaleBars(currentMilestone) {
+  const container = document.getElementById('scale-visual');
+  container.innerHTML = '';
+
+  // Show bars for milestones up to and including current
+  const visibleMilestones = milestones.filter(m => m.exp <= bigExp);
+  // Show last ~12 to keep it readable
+  const shown = visibleMilestones.slice(-12);
+  if (shown.length === 0) return;
+
+  const maxExp = shown[shown.length - 1].exp;
+
+  shown.forEach((m, i) => {
+    const bar = document.createElement('div');
+    bar.className = 'scale-bar';
+    if (m === currentMilestone) bar.classList.add('scale-bar-current');
+
+    const inner = document.createElement('div');
+    inner.className = 'scale-bar-inner';
+
+    // Height proportional to log scale, min 4px, max 200px
+    const fraction = maxExp === 0 ? 1 : m.exp / maxExp;
+    const height = Math.max(4, fraction * 200);
+    const width = Math.max(10, 20 + (shown.length < 6 ? 30 : 10));
+
+    inner.style.height = height + 'px';
+    inner.style.width = width + 'px';
+    inner.style.background = m.color;
+
+    if (m === currentMilestone) {
+      inner.style.boxShadow = '0 0 15px ' + m.color;
+    }
+
+    const label = document.createElement('div');
+    label.className = 'scale-bar-label';
+    label.textContent = m.emoji + (m.exp > 0 ? ' 10^' + m.exp : ' 1');
+
+    bar.appendChild(inner);
+    bar.appendChild(label);
+    container.appendChild(bar);
+  });
+}
+
+let blackHoleTriggered = false;
+
+function bigStep(dir) {
+  if (blackHoleTriggered) return;
+
+  if (dir > 0) {
+    bigSub++;
+    if (bigSub >= 10) {
+      bigSub = 0;
+      bigExp++;
+    }
+
+    // Danger zone effects (screen gets darker, shakes)
+    if (bigExp >= 420) {
+      const intensity = Math.min(1, (bigExp - 420) / 80);
+      document.body.style.background = `rgb(${Math.round(26 - 26*intensity)}, ${Math.round(26 - 26*intensity)}, ${Math.round(46 - 46*intensity)})`;
+    }
+    if (bigExp >= 460) {
+      document.getElementById('big-mode').classList.add('screen-shake');
+    }
+
+    // BLACK HOLE TRIGGER
+    if (bigExp >= 500) {
+      triggerBlackHole();
+      return;
+    }
+
+    // Check if we just hit a milestone
+    const m = getCurrentMilestone();
+    if (m.exp === bigExp && bigSub === 0) {
+      launchConfetti();
+      showStar();
+      speak(m.name + '! ' + m.desc);
+      document.body.style.animation = 'bgFlash 0.5s ease';
+      setTimeout(() => document.body.style.animation = '', 500);
+    }
+  } else {
+    bigSub--;
+    if (bigSub < 0) {
+      if (bigExp > 0) {
+        bigExp--;
+        bigSub = 9;
+      } else {
+        bigSub = 0;
+      }
+    }
+    // Remove danger effects when going back
+    if (bigExp < 420) {
+      document.body.style.background = '#1a1a2e';
+    }
+    if (bigExp < 460) {
+      document.getElementById('big-mode').classList.remove('screen-shake');
+    }
+  }
+  updateBigDisplay();
+}
+
+function triggerBlackHole() {
+  blackHoleTriggered = true;
+  document.getElementById('big-mode').classList.remove('screen-shake');
+
+  speak('The black hole! It\'s swallowing everything!');
+
+  const overlay = document.getElementById('black-hole-overlay');
+  const circle = document.getElementById('black-hole-circle');
+  const ring = document.getElementById('black-hole-ring');
+  overlay.classList.add('active');
+
+  // Phase 1: Suck in all the UI elements
+  const els = document.querySelectorAll('#milestone-emoji, #big-mode-number, #big-mode-name, #milestone-desc, #big-progress, #big-next-label, #scale-visual, #big-buttons, #keys-help-big');
+  els.forEach((el, i) => {
+    setTimeout(() => {
+      el.style.transformOrigin = 'center center';
+      el.classList.add('suck-in');
+    }, i * 100);
+  });
+
+  // Phase 2: Growing black hole with glowing ring
+  setTimeout(() => {
+    ring.style.transition = 'all 2s ease-in';
+    ring.style.width = '300px';
+    ring.style.height = '300px';
+    ring.style.border = '6px solid #6633cc';
+    ring.style.boxShadow = '0 0 60px #6633cc, 0 0 120px #4411aa, inset 0 0 60px rgba(102,51,204,0.3)';
+
+    circle.style.transition = 'all 2s ease-in';
+    circle.style.width = '200px';
+    circle.style.height = '200px';
+    circle.style.boxShadow = '0 0 80px rgba(0,0,0,0.8)';
+  }, 800);
+
+  // Phase 3: Black hole expands to consume screen
+  setTimeout(() => {
+    ring.style.transition = 'all 1.5s ease-in';
+    ring.style.width = '3000px';
+    ring.style.height = '3000px';
+    ring.style.border = '60px solid #6633cc';
+    ring.style.opacity = '0.3';
+
+    circle.style.transition = 'all 1.5s ease-in';
+    circle.style.width = '3000px';
+    circle.style.height = '3000px';
+  }, 2800);
+
+  // Phase 4: Full black, then reveal infinity
+  setTimeout(() => {
+    document.body.style.background = '#000';
+    overlay.style.background = '#000';
+    ring.style.display = 'none';
+    circle.style.display = 'none';
+
+    // Hide the mode tabs and title too
+    document.querySelector('h1').style.display = 'none';
+    document.querySelector('.mode-tabs').style.display = 'none';
+    document.getElementById('big-mode').style.display = 'none';
+  }, 4300);
+
+  // Phase 5: Infinity symbol fades in
+  setTimeout(() => {
+    const inf = document.getElementById('infinity-container');
+    inf.style.transition = 'opacity 2s ease';
+    inf.style.opacity = '1';
+    speak('You found infinity! Beyond all numbers, beyond everything, forever and ever!');
+
+    // Epic confetti
+    for (let i = 0; i < 8; i++) {
+      setTimeout(() => launchConfetti(), i * 300);
+    }
+  }, 5000);
+}
+
+function playAgain() {
+  blackHoleTriggered = false;
+  bigExp = 0;
+  bigSub = 0;
+
+  // Reset all the things
+  document.body.style.background = '#1a1a2e';
+  const overlay = document.getElementById('black-hole-overlay');
+  overlay.classList.remove('active');
+  overlay.style.background = '';
+
+  const circle = document.getElementById('black-hole-circle');
+  const ring = document.getElementById('black-hole-ring');
+  circle.style.transition = 'none';
+  circle.style.width = '0';
+  circle.style.height = '0';
+  circle.style.display = '';
+  ring.style.transition = 'none';
+  ring.style.width = '0';
+  ring.style.height = '0';
+  ring.style.display = '';
+  ring.style.opacity = '';
+
+  document.getElementById('infinity-container').style.opacity = '0';
+
+  // Restore UI
+  document.querySelector('h1').style.display = '';
+  document.querySelector('.mode-tabs').style.display = '';
+
+  // Un-suck all elements
+  const els = document.querySelectorAll('.suck-in');
+  els.forEach(el => {
+    el.classList.remove('suck-in');
+    el.style.transform = '';
+    el.style.opacity = '';
+  });
+
+  switchMode('big');
+  updateBigDisplay();
+}
+
+function bigJump() {
+  if (blackHoleTriggered) return;
+  const next = getNextMilestone();
+  if (next) {
+    bigExp = next.exp;
+    bigSub = 0;
+
+    // Danger zone effects
+    if (bigExp >= 420) {
+      const intensity = Math.min(1, (bigExp - 420) / 80);
+      document.body.style.background = `rgb(${Math.round(26 - 26*intensity)}, ${Math.round(26 - 26*intensity)}, ${Math.round(46 - 46*intensity)})`;
+    }
+    if (bigExp >= 460) {
+      document.getElementById('big-mode').classList.add('screen-shake');
+    }
+
+    if (bigExp >= 500) {
+      triggerBlackHole();
+      return;
+    }
+
+    const m = getCurrentMilestone();
+    launchConfetti();
+    showStar();
+    speak(m.name + '! ' + m.desc);
+    document.body.style.animation = 'bgFlash 0.5s ease';
+    setTimeout(() => document.body.style.animation = '', 500);
+  } else {
+    // Already past all milestones, jump by 10 exponents
+    bigExp += 10;
+    bigSub = 0;
+    if (bigExp >= 500) {
+      triggerBlackHole();
+      return;
+    }
+  }
+  updateBigDisplay();
+}
+
+function bigReset() {
+  bigExp = 0;
+  bigSub = 0;
+  document.body.style.background = '#1a1a2e';
+  document.getElementById('big-mode').classList.remove('screen-shake');
+  updateBigDisplay();
+}
+
+// ===== SHARED =====
+function speak(text) {
+  if ('speechSynthesis' in window) {
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    u.rate = 0.9;
+    u.pitch = 1.2;
+    speechSynthesis.speak(u);
+  }
+}
+
+function launchConfetti() {
+  const container = document.getElementById('confetti-container');
+  const colors = ['#e74c3c','#3498db','#f1c40f','#2ecc71','#9b59b6','#e91e63','#ff9800'];
+  for (let i = 0; i < 40; i++) {
+    const c = document.createElement('div');
+    c.className = 'confetti';
+    c.style.left = Math.random() * 100 + '%';
+    c.style.top = '-20px';
+    c.style.background = colors[Math.floor(Math.random() * colors.length)];
+    c.style.animationDelay = Math.random() * 0.5 + 's';
+    c.style.transform = 'rotate(' + Math.random() * 360 + 'deg)';
+    container.appendChild(c);
+    setTimeout(() => c.remove(), 2500);
+  }
+}
+
+function showStar() {
+  const star = document.createElement('div');
+  star.className = 'star-burst';
+  star.textContent = '⭐';
+  star.style.left = (20 + Math.random() * 60) + '%';
+  star.style.top = (20 + Math.random() * 40) + '%';
+  document.body.appendChild(star);
+  setTimeout(() => star.remove(), 1000);
+}
+
+// ===== KEYBOARD =====
+document.addEventListener('keydown', (e) => {
+  // Tab to switch modes
+  if (e.key === 'Tab') {
+    e.preventDefault();
+    switchMode(currentMode === 'counting' ? 'big' : 'counting');
+    return;
+  }
+
+  if (currentMode === 'counting') {
+    if (e.key === 'ArrowRight') addCount(1);
+    else if (e.key === 'ArrowLeft') addCount(-1);
+    else if (e.key === 'ArrowUp') { e.preventDefault(); addCount(10); }
+    else if (e.key === 'ArrowDown') { e.preventDefault(); addCount(-10); }
+    else if (e.key === 's' || e.key === 'S') doSurprise();
+    else if (e.key === 'r' || e.key === 'R') { count = 0; updateCountDisplay(); }
+    else if (e.key === ' ') {
+      e.preventDefault();
+      document.querySelectorAll('.block:not(.empty)').forEach(b => {
+        b.classList.remove('wiggle'); void b.offsetWidth; b.classList.add('wiggle');
+      });
+      launchConfetti();
+    }
+  } else {
+    if (e.key === 'ArrowUp') { e.preventDefault(); bigJump(); }
+    else if (e.key === 'ArrowRight') { e.preventDefault(); bigStep(1); }
+    else if (e.key === 'ArrowLeft' || e.key === 'ArrowDown') { e.preventDefault(); bigStep(-1); }
+    else if (e.key === 'r' || e.key === 'R') bigReset();
+    else if (e.key === ' ') { e.preventDefault(); launchConfetti(); }
+  }
+});
+
+// start!
+updateCountDisplay();
+</script>
+</body>
+</html>

@@ -35,6 +35,31 @@
   #next-btn{position:fixed;bottom:30px;right:30px;z-index:200;display:none;font-family:'Lilita One',cursive;font-size:1.3rem;padding:12px 35px;border:none;border-radius:10px;background:linear-gradient(135deg,#2ED573,#1E90FF);color:white;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,0.2);transition:transform .12s;animation:btnPulse 2s ease-in-out infinite}
   #next-btn:active{transform:translateY(3px)}
   @keyframes btnPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.05)}}
+
+  /* ── UPGRADE SCREEN ── */
+  #upgrade-screen{position:fixed;inset:0;z-index:400;display:none;flex-direction:column;align-items:center;justify-content:center;background:rgba(0,0,0,0.85);backdrop-filter:blur(10px);cursor:default}
+  #upgrade-screen.visible{display:flex}
+  .up-points{font-family:'Lilita One',cursive;font-size:clamp(1.8rem,4vw,2.5rem);color:#FFC312;margin-bottom:24px;text-shadow:0 2px 10px rgba(255,195,18,0.4)}
+  .up-title{font-family:'Lilita One',cursive;font-size:clamp(2rem,5vw,3rem);color:white;margin-bottom:8px}
+  .up-subtitle{color:rgba(255,255,255,0.5);margin-bottom:28px;font-size:clamp(0.8rem,2vw,1rem)}
+  .up-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;max-width:800px;width:90%;margin-bottom:32px}
+  @media(max-width:600px){.up-grid{grid-template-columns:repeat(2,1fr)}}
+  .up-card{background:rgba(255,255,255,0.07);border:2px solid rgba(255,255,255,0.12);border-radius:14px;padding:18px 14px;text-align:center;transition:transform .15s,border-color .15s}
+  .up-card:hover{transform:translateY(-3px);border-color:rgba(255,255,255,0.25)}
+  .up-card .icon{font-size:2.2rem;margin-bottom:6px}
+  .up-card .name{font-family:'Lilita One',cursive;font-size:1.1rem;color:white;margin-bottom:4px}
+  .up-card .tier{font-size:.8rem;color:rgba(255,255,255,0.5);margin-bottom:8px}
+  .up-card .pips{display:flex;justify-content:center;gap:5px;margin-bottom:10px}
+  .up-card .pip{width:10px;height:10px;border-radius:50%;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.25)}
+  .up-card .pip.filled{background:#FFC312;border-color:#FFC312}
+  .up-card .buy-btn{font-family:'Lilita One',cursive;font-size:.95rem;padding:8px 18px;border:none;border-radius:8px;background:linear-gradient(135deg,#2ED573,#1E90FF);color:white;cursor:pointer;transition:transform .1s,box-shadow .1s;box-shadow:0 3px 0 rgba(0,0,0,0.2)}
+  .up-card .buy-btn:active{transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,0.2)}
+  .up-card .buy-btn.maxed{background:linear-gradient(135deg,#666,#888);cursor:default}
+  .up-card .buy-btn.shake{animation:btnShake .4s ease-in-out}
+  @keyframes btnShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-6px)}40%{transform:translateX(6px)}60%{transform:translateX(-4px)}80%{transform:translateX(4px)}}
+  .up-next{font-family:'Lilita One',cursive;font-size:clamp(1.2rem,3vw,1.6rem);padding:14px 50px;border:none;border-radius:12px;background:linear-gradient(135deg,#FF4757,#FF6B2C);color:white;cursor:pointer;box-shadow:0 5px 0 #c0392b;transition:transform .12s;text-transform:uppercase;letter-spacing:2px}
+  .up-next:hover{transform:translateY(-2px)}
+  .up-next:active{transform:translateY(3px);box-shadow:0 2px 0 #c0392b}
 </style>
 </head>
 <body>
@@ -51,6 +76,7 @@
 <canvas id="c"></canvas>
 
 <div id="hud">
+  <div class="h-item">💰 <span class="h-val" id="h-points">0</span></div>
   <div class="h-item">💥 <span class="h-val" id="h-score">0</span></div>
   <div class="h-item">🏗️ <span class="h-val" id="h-level">1</span></div>
   <div class="h-item" style="gap:10px">
@@ -66,6 +92,14 @@
 </div>
 
 <button id="next-btn" onclick="nextLevel()">NEXT LEVEL ➜</button>
+
+<div id="upgrade-screen">
+  <div class="up-title">UPGRADES</div>
+  <div class="up-subtitle">Spend points to power up your wrecking ball</div>
+  <div class="up-points" id="up-points">💰 0</div>
+  <div class="up-grid" id="up-grid"></div>
+  <button class="up-next" onclick="closeUpgradeScreen()">NEXT LEVEL ➜</button>
+</div>
 
 <script>
 // ═══════════════════════════════════════════
@@ -104,14 +138,12 @@ function noise(duration, freq, type, vol = 0.15) {
 
 function playGlassBreak(force) {
   const v = Math.min(0.2, force * 0.003);
-  // High shimmer
   for (let i = 0; i < 3; i++) {
     setTimeout(() => {
       noise(0.08 + Math.random() * 0.06, 3000 + Math.random() * 4000, 'sine', v * 0.7);
       noise(0.04, 6000 + Math.random() * 3000, 'square', v * 0.3);
     }, i * 15);
   }
-  // Crunch
   noise(0.12, 800 + Math.random() * 400, 'sawtooth', v * 0.5);
 }
 
@@ -129,12 +161,33 @@ function playBrickBreak(force) {
   setTimeout(() => noise(0.12, 80 + Math.random() * 40, 'triangle', v * 0.5), 40);
 }
 
+function playSquishBreak(force) {
+  if (!ac) return;
+  const v = Math.min(0.25, force * 0.005);
+  // Low-frequency squelch with pitch bend
+  const o = ac.createOscillator();
+  const g = ac.createGain();
+  o.type = 'sine';
+  o.frequency.setValueAtTime(180, ac.currentTime);
+  o.frequency.exponentialRampToValueAtTime(60, ac.currentTime + 0.15);
+  g.gain.setValueAtTime(v, ac.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + 0.2);
+  o.connect(g).connect(ac.destination);
+  o.start(); o.stop(ac.currentTime + 0.2);
+  // Bubbly overtone
+  setTimeout(() => {
+    noise(0.08, 300 + Math.random() * 100, 'sine', v * 0.5);
+    noise(0.06, 150 + Math.random() * 80, 'triangle', v * 0.3);
+  }, 20);
+}
+
 function playImpact(force) {
   const v = Math.min(0.12, force * 0.002);
   noise(0.1, 120, 'sine', v);
 }
 
 // ── MATERIALS ──
+const SQUISHY_COLORS = ['#44FF44', '#FF44AA', '#AA44FF', '#FF8800', '#44FFDD', '#FF44FF'];
 const MAT = {
   glass: {
     hp: 12, density: 0.8, color: 'rgba(150,220,255,0.55)', stroke: 'rgba(180,230,255,0.7)',
@@ -179,6 +232,20 @@ const MAT = {
       g.addColorStop(0, '#999'); g.addColorStop(0.5, '#777'); g.addColorStop(1, '#888');
       return g;
     }
+  },
+  squishy: {
+    hp: 8, density: 0.5, color: '#44FF44', stroke: '#22CC22',
+    shardColor: () => SQUISHY_COLORS[Math.floor(Math.random() * SQUISHY_COLORS.length)],
+    shards: 8, sfx: playSquishBreak, label: 'Squishy',
+    fill: (x, y, w, h) => {
+      const g = c.createRadialGradient(x + w/2, y + h/2, 0, x + w/2, y + h/2, Math.max(w, h));
+      // Pick a random-ish bright color based on block position (deterministic per block)
+      const ci = Math.floor((x * 7 + y * 13) % SQUISHY_COLORS.length);
+      const col = SQUISHY_COLORS[ci];
+      g.addColorStop(0, col);
+      g.addColorStop(1, col + 'AA');
+      return g;
+    }
   }
 };
 
@@ -188,30 +255,51 @@ const FRICTION = 0.997;
 const GROUND_BOUNCE = 0.2;
 const DEBRIS_LIMIT = 300;
 
+// ── UPGRADE SYSTEM ──
+const UPGRADES = {
+  ballSize:  { name: 'Ball Size',   icon: '🔴', tiers: [34, 42, 52, 64],      costs: [100, 300, 600] },
+  ballWeight:{ name: 'Ball Weight',  icon: '🏋️', tiers: [1.0, 1.4, 1.9, 2.5],  costs: [100, 300, 600] },
+  powerMode: { name: 'Power Mode',  icon: '🔥', tiers: [3.0, 4.5, 6.0, 8.0],  costs: [150, 400, 800] },
+  chainLen:  { name: 'Chain Length', icon: '⛓️', tiers: [12, 14, 16, 18],      costs: [100, 250, 500] },
+};
+let upgradeLevels = { ballSize: 0, ballWeight: 0, powerMode: 0, chainLen: 0 };
+let points = 0;
+let levelScore = 0; // score earned in current level only
+
+function getUpgradeValue(key) {
+  return UPGRADES[key].tiers[upgradeLevels[key]];
+}
+
 // ── GAME STATE ──
 let blocks = [];
 let debris = [];
+let splatters = [];
 let score = 0;
 let currentLevel = 0;
 let totalBlocks = 0;
 let brokenBlocks = 0;
 let shakeX = 0, shakeY = 0, shakeMag = 0;
 let gameRunning = false;
+let gamePaused = false;
+let levelComplete = false;
 let mouseX = W / 2, mouseY = H / 2;
 let mouseDown = false;
 let powerGlow = 0;
+let gameTime = 0;
 
 // ── WRECKING BALL (chain physics) ──
-const CHAIN_SEGMENTS = 12;
+let chainSegments = 12;
 const CHAIN_LEN = 32;
-let chain = []; // array of {x, y, ox, oy} verlet points
+let chain = [];
 let ballRadius = 34;
 let anchorX, anchorY;
 
 function initChain() {
+  chainSegments = getUpgradeValue('chainLen');
+  ballRadius = getUpgradeValue('ballSize');
   anchorX = W / 2; anchorY = 80;
   chain = [];
-  for (let i = 0; i <= CHAIN_SEGMENTS; i++) {
+  for (let i = 0; i <= chainSegments; i++) {
     const x = anchorX;
     const y = anchorY + i * CHAIN_LEN;
     chain.push({ x, y, ox: x, oy: y });
@@ -219,13 +307,12 @@ function initChain() {
 }
 
 function updateChain() {
-  // Anchor follows mouse — allow it to go high enough for full reach
+  // Anchor follows mouse
   const targetAX = mouseX;
   const targetAY = Math.min(Math.max(mouseY * 0.5, 30), H * 0.55);
   anchorX += (targetAX - anchorX) * 0.08;
   anchorY += (targetAY - anchorY) * 0.06;
 
-  // Power mode — tighter, faster follow
   if (mouseDown) {
     anchorX += (targetAX - anchorX) * 0.1;
     anchorY += (targetAY - anchorY) * 0.06;
@@ -234,26 +321,22 @@ function updateChain() {
     powerGlow *= 0.95;
   }
 
-  // Pin first point to anchor
   chain[0].x = anchorX;
   chain[0].y = anchorY;
   chain[0].ox = anchorX;
   chain[0].oy = anchorY;
 
-  // Verlet integration on chain points — heavy ball pulls hard
   for (let i = 1; i < chain.length; i++) {
     const p = chain[i];
     const vx = (p.x - p.ox) * FRICTION;
     const vy = (p.y - p.oy) * FRICTION;
     p.ox = p.x;
     p.oy = p.y;
-    // Heavier at the end (ball end gets more gravity)
     const massScale = 0.5 + (i / chain.length) * 1.0;
     p.x += vx;
     p.y += vy + GRAVITY * massScale;
   }
 
-  // Distance constraints (many iterations = stiff, smooth chain)
   for (let iter = 0; iter < 12; iter++) {
     for (let i = 0; i < chain.length - 1; i++) {
       const a = chain[i], b = chain[i + 1];
@@ -266,22 +349,17 @@ function updateChain() {
       if (i > 0) { a.x += mx; a.y += my; }
       b.x -= mx; b.y -= my;
     }
-    // Re-pin anchor
     chain[0].x = anchorX; chain[0].y = anchorY;
   }
 
-  // Ground constraint for ball — heavy, minimal bounce
   const ball = chain[chain.length - 1];
   const groundY = H - 60;
   if (ball.y + ballRadius > groundY) {
     ball.y = groundY - ballRadius;
-    // Barely bounce — heavy ball just scrapes along
     const vy = ball.y - ball.oy;
     ball.oy = ball.y + vy * 0.15;
-    // Slow horizontal too
     ball.ox = ball.x - (ball.x - ball.ox) * 0.92;
   }
-  // Wall constraints — minimal bounce
   if (ball.x - ballRadius < 0) { ball.x = ballRadius; ball.ox = ball.x + (ball.x - ball.ox) * 0.2; }
   if (ball.x + ballRadius > W) { ball.x = W - ballRadius; ball.ox = ball.x + (ball.x - ball.ox) * 0.2; }
 }
@@ -302,12 +380,17 @@ function createBlock(x, y, w, h, mat) {
     dynamic: false,
     settled: 0,
     crackLevel: 0,
+    wobble: 0,
   };
 }
 
 // ── DEBRIS ──
 function spawnDebris(block, force) {
   const mat = MAT[block.mat];
+  if (block.mat === 'squishy') {
+    spawnSplatter(block, force);
+    return;
+  }
   const count = mat.shards + Math.floor(force * 0.3);
   for (let i = 0; i < count && debris.length < DEBRIS_LIMIT; i++) {
     const size = 3 + Math.random() * (block.w * 0.25);
@@ -329,11 +412,84 @@ function spawnDebris(block, force) {
   }
 }
 
+// ── SPLATTERS (squishy material) ──
+function spawnSplatter(block, force) {
+  const count = 10 + Math.floor(force * 0.5);
+  const colors = ['#44FF44', '#FF44AA', '#AA44FF', '#FF8800', '#44FFDD', '#FF44FF'];
+  for (let i = 0; i < count; i++) {
+    const angle = Math.random() * Math.PI * 2;
+    const speed = 1.5 + Math.random() * force * 0.35;
+    const radius = 4 + Math.random() * 8;
+    splatters.push({
+      x: block.x + block.w * (0.2 + Math.random() * 0.6),
+      y: block.y + block.h * (0.2 + Math.random() * 0.6),
+      radius: radius,
+      maxRadius: radius * (1.5 + Math.random() * 0.5),
+      vx: Math.cos(angle) * speed * (0.5 + Math.random()),
+      vy: Math.sin(angle) * speed - 1.5,
+      color: colors[Math.floor(Math.random() * colors.length)],
+      life: 1,
+      stuck: false,
+      spreading: false,
+      groundY: H - 60 + Math.random() * 5,
+    });
+  }
+}
+
+function updateSplatters() {
+  splatters.forEach(s => {
+    if (s.stuck) {
+      // Spread out slowly then fade
+      if (s.spreading) {
+        s.radius = Math.min(s.radius + 0.15, s.maxRadius);
+      }
+      s.life -= 0.004;
+      return;
+    }
+    s.vy += GRAVITY * 0.4;
+    s.vx *= 0.99;
+    s.x += s.vx;
+    s.y += s.vy;
+
+    // Stick to ground
+    if (s.y + s.radius > s.groundY) {
+      s.y = s.groundY - s.radius * 0.3;
+      s.stuck = true;
+      s.spreading = true;
+    }
+    // Stick to walls
+    if (s.x - s.radius < 0) { s.x = s.radius; s.stuck = true; s.spreading = true; }
+    if (s.x + s.radius > W) { s.x = W - s.radius; s.stuck = true; s.spreading = true; }
+  });
+  splatters = splatters.filter(s => s.life > 0);
+}
+
+function drawSplatters() {
+  splatters.forEach(s => {
+    c.save();
+    c.globalAlpha = s.life * 0.8;
+    c.fillStyle = s.color;
+    c.beginPath();
+    c.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+    c.fill();
+    // Glossy highlight
+    c.globalAlpha = s.life * 0.3;
+    c.fillStyle = 'white';
+    c.beginPath();
+    c.arc(s.x - s.radius * 0.25, s.y - s.radius * 0.25, s.radius * 0.3, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+  });
+  c.globalAlpha = 1;
+}
+
 // ── COLLISION ──
 function ballBlockCollision() {
   const ball = chain[chain.length - 1];
   const bv = getBallVelocity();
   const speed = Math.sqrt(bv.vx * bv.vx + bv.vy * bv.vy);
+  const powerForceMultiplier = getUpgradeValue('powerMode');
+  const weightMultiplier = getUpgradeValue('ballWeight');
 
   blocks.forEach(block => {
     if (block.hp <= 0) return;
@@ -345,29 +501,26 @@ function ballBlockCollision() {
     const dist = Math.sqrt(dx * dx + dy * dy);
 
     if (dist < ballRadius) {
-      const force = speed * (mouseDown ? 3.0 : 1.8);
+      const force = speed * (mouseDown ? powerForceMultiplier : 1.8);
       const overlap = ballRadius - dist;
       const nx = dist > 0 ? dx / dist : 0;
       const ny = dist > 0 ? dy / dist : -1;
 
-      // Push ball out — but only slightly (heavy ball plows through)
       ball.x += nx * overlap * 0.3;
       ball.y += ny * overlap * 0.3;
 
-      // Minimal bounce — heavy ball keeps going, doesn't ricochet
       const dot = bv.vx * nx + bv.vy * ny;
-      const dampening = 0.12; // very low = ball barely bounces
+      const dampening = 0.12;
       ball.ox = ball.x + (bv.vx - 2 * dot * nx * dampening);
       ball.oy = ball.y + (bv.vy - 2 * dot * ny * dampening);
 
-      // Damage block
-      const dmg = force * (1 + powerGlow * 0.5);
+      // Damage block (apply weight multiplier)
+      const dmg = force * (1 + powerGlow * 0.5) * weightMultiplier;
       block.hp -= dmg;
       block.crackLevel = 1 - (block.hp / block.maxHp);
 
       playImpact(force);
 
-      // Transfer momentum TO the block (push it hard)
       const pushX = bv.vx * 0.7;
       const pushY = bv.vy * 0.5;
 
@@ -375,12 +528,15 @@ function ballBlockCollision() {
         // BREAK!
         MAT[block.mat].sfx(force);
         spawnDebris(block, force);
-        score += Math.floor(10 * MAT[block.mat].density * (1 + powerGlow));
+        const pts = Math.floor(10 * MAT[block.mat].density * (1 + powerGlow));
+        score += pts;
+        points += pts;
+        levelScore += pts;
         brokenBlocks++;
         updateHUD();
         shakeMag = Math.min(18, force * 1.5);
 
-        // PROPAGATE: push ALL nearby/touching blocks
+        // PROPAGATE
         blocks.forEach(other => {
           if (other.hp <= 0 || other === block) return;
           const cdx = (other.x + other.w/2) - (block.x + block.w/2);
@@ -398,7 +554,10 @@ function ballBlockCollision() {
           }
         });
       } else {
-        // Push the hit block
+        // Wobble for squishy blocks
+        if (block.mat === 'squishy') {
+          block.wobble = 1.0;
+        }
         if (!block.dynamic && force > 1.5) {
           block.dynamic = true;
         }
@@ -407,7 +566,6 @@ function ballBlockCollision() {
         block.vr += (Math.random() - 0.5) * force * 0.4;
         shakeMag = Math.min(10, force * 0.6);
 
-        // Push neighbors proportionally
         blocks.forEach(other => {
           if (other.hp <= 0 || other === block) return;
           const cdx = (other.x + other.w/2) - (block.x + block.w/2);
@@ -429,9 +587,18 @@ function ballBlockCollision() {
 
 function updateBlocks() {
   const groundY = H - 60;
+  const weightMultiplier = getUpgradeValue('ballWeight');
 
   blocks.forEach(block => {
     if (block.hp <= 0) return;
+
+    // Decay wobble for squishy blocks
+    if (block.wobble > 0.01) {
+      block.wobble *= 0.9;
+    } else {
+      block.wobble = 0;
+    }
+
     if (!block.dynamic) return;
 
     block.vy += GRAVITY * 0.6;
@@ -444,7 +611,6 @@ function updateBlocks() {
     // Ground
     if (block.y + block.h > groundY) {
       block.y = groundY - block.h;
-      // Break from fall speed
       if (Math.abs(block.vy) > 3) {
         const fallForce = Math.abs(block.vy) * 2.5;
         block.hp -= fallForce;
@@ -452,10 +618,15 @@ function updateBlocks() {
         if (block.hp <= 0) {
           MAT[block.mat].sfx(fallForce);
           spawnDebris(block, fallForce);
-          score += Math.floor(5 * MAT[block.mat].density);
+          const pts = Math.floor(5 * MAT[block.mat].density);
+          score += pts;
+          points += pts;
+          levelScore += pts;
           brokenBlocks++;
           updateHUD();
           shakeMag = Math.min(8, fallForce * 0.4);
+        } else if (block.mat === 'squishy') {
+          block.wobble = 1.0;
         }
       }
       block.vy *= -GROUND_BOUNCE;
@@ -471,15 +642,13 @@ function updateBlocks() {
     if (block.x < 0) { block.x = 0; block.vx *= -0.5; }
     if (block.x + block.w > W) { block.x = W - block.w; block.vx *= -0.5; }
 
-    // Block-on-block collision with momentum transfer
+    // Block-on-block collision
     blocks.forEach(other => {
       if (other === block || other.hp <= 0) return;
       if (block.x < other.x + other.w && block.x + block.w > other.x &&
           block.y < other.y + other.h && block.y + block.h > other.y) {
         const overlapX = Math.min(block.x + block.w - other.x, other.x + other.w - block.x);
         const overlapY = Math.min(block.y + block.h - other.y, other.y + other.h - block.y);
-
-        // Momentum transfer — push the other block too
         const transferRate = 0.6;
 
         if (overlapX < overlapY) {
@@ -490,7 +659,6 @@ function updateBlocks() {
             block.x += overlapX * 0.4;
             other.x -= overlapX * 0.4;
           }
-          // Transfer horizontal momentum
           other.dynamic = true;
           const avgVx = (block.vx + other.vx) * 0.5;
           other.vx += (block.vx - other.vx) * transferRate;
@@ -501,13 +669,11 @@ function updateBlocks() {
             block.y -= overlapY * 0.4;
             other.y += overlapY * 0.2;
             block.vy *= -GROUND_BOUNCE;
-            // Transfer downward force
             if (Math.abs(block.vy) > 1) {
               other.dynamic = true;
               other.vy += block.vy * transferRate;
               other.vx += block.vx * 0.3;
               other.vr += (Math.random() - 0.5) * 2;
-              // Damage from heavy impact
               if (Math.abs(block.vy) > 5) {
                 const impactDmg = Math.abs(block.vy) * MAT[block.mat].density * 0.3;
                 other.hp -= impactDmg;
@@ -515,10 +681,15 @@ function updateBlocks() {
                 if (other.hp <= 0) {
                   MAT[other.mat].sfx(impactDmg);
                   spawnDebris(other, impactDmg);
-                  score += Math.floor(5 * MAT[other.mat].density);
+                  const pts = Math.floor(5 * MAT[other.mat].density);
+                  score += pts;
+                  points += pts;
+                  levelScore += pts;
                   brokenBlocks++;
                   updateHUD();
                   shakeMag = Math.max(shakeMag, impactDmg * 0.3);
+                } else if (other.mat === 'squishy') {
+                  other.wobble = 1.0;
                 }
               }
             }
@@ -534,7 +705,6 @@ function updateBlocks() {
     });
   });
 
-  // Remove dead blocks
   blocks = blocks.filter(b => b.hp > 0);
 }
 
@@ -575,7 +745,6 @@ function updateShake() {
 
 // ── DRAWING ──
 function drawBackground() {
-  // Sky gradient
   const sky = c.createLinearGradient(0, 0, 0, H);
   sky.addColorStop(0, '#1a1a2e');
   sky.addColorStop(0.5, '#16213e');
@@ -584,7 +753,6 @@ function drawBackground() {
   c.fillStyle = sky;
   c.fillRect(0, 0, W, H);
 
-  // Stars
   c.fillStyle = 'rgba(255,255,255,0.3)';
   for (let i = 0; i < 40; i++) {
     const sx = (i * 137.5 + 50) % W;
@@ -593,13 +761,11 @@ function drawBackground() {
     c.beginPath(); c.arc(sx, sy, sr, 0, Math.PI * 2); c.fill();
   }
 
-  // Ground
   c.fillStyle = '#2d2d44';
   c.fillRect(0, H - 60, W, 60);
   c.fillStyle = '#3a3a55';
   c.fillRect(0, H - 60, W, 3);
 
-  // Ground texture lines
   c.strokeStyle = 'rgba(255,255,255,0.03)';
   c.lineWidth = 1;
   for (let x = 0; x < W; x += 40) {
@@ -608,7 +774,6 @@ function drawBackground() {
 }
 
 function drawChain() {
-  // Chain links
   c.strokeStyle = '#666';
   c.lineWidth = 4;
   c.lineCap = 'round';
@@ -619,7 +784,6 @@ function drawChain() {
   });
   c.stroke();
 
-  // Chain link details
   c.fillStyle = '#888';
   for (let i = 1; i < chain.length - 1; i += 2) {
     c.beginPath();
@@ -627,7 +791,6 @@ function drawChain() {
     c.fill();
   }
 
-  // Anchor point (crane hook)
   c.fillStyle = '#AAA';
   c.beginPath();
   c.arc(anchorX, anchorY, 8, 0, Math.PI * 2);
@@ -641,7 +804,6 @@ function drawChain() {
 function drawBall() {
   const ball = chain[chain.length - 1];
 
-  // Power glow
   if (powerGlow > 0.05) {
     const grd = c.createRadialGradient(ball.x, ball.y, ballRadius, ball.x, ball.y, ballRadius * 3);
     grd.addColorStop(0, `rgba(255,${Math.floor(100 - powerGlow * 100)},0,${powerGlow * 0.4})`);
@@ -650,13 +812,11 @@ function drawBall() {
     c.beginPath(); c.arc(ball.x, ball.y, ballRadius * 3, 0, Math.PI * 2); c.fill();
   }
 
-  // Shadow
   c.fillStyle = 'rgba(0,0,0,0.3)';
   c.beginPath();
   c.ellipse(ball.x + 3, H - 56, ballRadius * 0.7, 5, 0, 0, Math.PI * 2);
   c.fill();
 
-  // Ball
   const bg = c.createRadialGradient(ball.x - 8, ball.y - 10, 4, ball.x, ball.y, ballRadius);
   bg.addColorStop(0, '#777');
   bg.addColorStop(0.6, '#444');
@@ -664,11 +824,9 @@ function drawBall() {
   c.fillStyle = bg;
   c.beginPath(); c.arc(ball.x, ball.y, ballRadius, 0, Math.PI * 2); c.fill();
 
-  // Metallic highlight
   c.fillStyle = 'rgba(255,255,255,0.15)';
   c.beginPath(); c.arc(ball.x - 7, ball.y - 8, ballRadius * 0.35, 0, Math.PI * 2); c.fill();
 
-  // Ring
   c.strokeStyle = '#555';
   c.lineWidth = 3;
   c.beginPath(); c.arc(ball.x, ball.y, ballRadius - 1, 0, Math.PI * 2); c.stroke();
@@ -680,6 +838,18 @@ function drawBlocks() {
     const m = MAT[block.mat];
 
     c.save();
+
+    // Wobble for squishy blocks
+    if (block.mat === 'squishy' && block.wobble > 0.01) {
+      const cx = block.x + block.w / 2;
+      const cy = block.y + block.h / 2;
+      const scaleX = 1 + Math.sin(gameTime * 20) * block.wobble * 0.1;
+      const scaleY = 1 - Math.sin(gameTime * 20) * block.wobble * 0.08;
+      c.translate(cx, cy);
+      c.scale(scaleX, scaleY);
+      c.translate(-cx, -cy);
+    }
+
     if (block.angle) {
       c.translate(block.x + block.w / 2, block.y + block.h / 2);
       c.rotate(block.angle * Math.PI / 180);
@@ -692,12 +862,47 @@ function drawBlocks() {
 
     // Block body
     c.fillStyle = m.fill(block.x, block.y, block.w, block.h);
-    c.fillRect(block.x, block.y, block.w, block.h);
-
-    // Border
-    c.strokeStyle = m.stroke;
-    c.lineWidth = 1.5;
-    c.strokeRect(block.x, block.y, block.w, block.h);
+    if (block.mat === 'squishy') {
+      // Rounded rectangle for squishy blocks
+      const r = Math.min(block.w, block.h) * 0.25;
+      c.beginPath();
+      c.moveTo(block.x + r, block.y);
+      c.lineTo(block.x + block.w - r, block.y);
+      c.quadraticCurveTo(block.x + block.w, block.y, block.x + block.w, block.y + r);
+      c.lineTo(block.x + block.w, block.y + block.h - r);
+      c.quadraticCurveTo(block.x + block.w, block.y + block.h, block.x + block.w - r, block.y + block.h);
+      c.lineTo(block.x + r, block.y + block.h);
+      c.quadraticCurveTo(block.x, block.y + block.h, block.x, block.y + block.h - r);
+      c.lineTo(block.x, block.y + r);
+      c.quadraticCurveTo(block.x, block.y, block.x + r, block.y);
+      c.closePath();
+      c.fill();
+      // Glossy highlight
+      c.fillStyle = 'rgba(255,255,255,0.2)';
+      c.beginPath();
+      c.ellipse(block.x + block.w * 0.35, block.y + block.h * 0.3, block.w * 0.2, block.h * 0.15, -0.3, 0, Math.PI * 2);
+      c.fill();
+      // Border
+      c.strokeStyle = m.stroke;
+      c.lineWidth = 1.5;
+      c.beginPath();
+      c.moveTo(block.x + r, block.y);
+      c.lineTo(block.x + block.w - r, block.y);
+      c.quadraticCurveTo(block.x + block.w, block.y, block.x + block.w, block.y + r);
+      c.lineTo(block.x + block.w, block.y + block.h - r);
+      c.quadraticCurveTo(block.x + block.w, block.y + block.h, block.x + block.w - r, block.y + block.h);
+      c.lineTo(block.x + r, block.y + block.h);
+      c.quadraticCurveTo(block.x, block.y + block.h, block.x, block.y + block.h - r);
+      c.lineTo(block.x, block.y + r);
+      c.quadraticCurveTo(block.x, block.y, block.x + r, block.y);
+      c.closePath();
+      c.stroke();
+    } else {
+      c.fillRect(block.x, block.y, block.w, block.h);
+      c.strokeStyle = m.stroke;
+      c.lineWidth = 1.5;
+      c.strokeRect(block.x, block.y, block.w, block.h);
+    }
 
     // Glass reflection
     if (block.mat === 'glass') {
@@ -745,26 +950,39 @@ function drawBlocks() {
       }
     }
 
-    // Cracks
-    if (block.crackLevel > 0.2) {
+    // Stone texture
+    if (block.mat === 'stone') {
+      c.strokeStyle = 'rgba(0,0,0,0.08)';
+      c.lineWidth = 1;
+      for (let i = 0; i < 2; i++) {
+        const sx = block.x + block.w * (0.3 + i * 0.4);
+        c.beginPath();
+        c.moveTo(sx, block.y);
+        c.lineTo(sx + block.w * 0.1, block.y + block.h);
+        c.stroke();
+      }
+    }
+
+    // Cracks (not for squishy)
+    if (block.mat !== 'squishy' && block.crackLevel > 0.2) {
       c.strokeStyle = `rgba(0,0,0,${block.crackLevel * 0.6})`;
       c.lineWidth = 1;
-      const cx = block.x + block.w * (0.3 + Math.sin(block.x) * 0.2);
-      const cy = block.y + block.h * (0.3 + Math.cos(block.y) * 0.2);
+      const cx2 = block.x + block.w * (0.3 + Math.sin(block.x) * 0.2);
+      const cy2 = block.y + block.h * (0.3 + Math.cos(block.y) * 0.2);
       const numCracks = Math.floor(block.crackLevel * 5);
       for (let i = 0; i < numCracks; i++) {
         const a = (i / numCracks) * Math.PI * 2 + block.x * 0.1;
         const len = block.crackLevel * Math.min(block.w, block.h) * 0.5;
         c.beginPath();
-        c.moveTo(cx, cy);
-        c.lineTo(cx + Math.cos(a) * len, cy + Math.sin(a) * len);
-        c.lineTo(cx + Math.cos(a + 0.3) * len * 0.6, cy + Math.sin(a + 0.5) * len * 0.7);
+        c.moveTo(cx2, cy2);
+        c.lineTo(cx2 + Math.cos(a) * len, cy2 + Math.sin(a) * len);
+        c.lineTo(cx2 + Math.cos(a + 0.3) * len * 0.6, cy2 + Math.sin(a + 0.5) * len * 0.7);
         c.stroke();
       }
     }
 
-    // Damage tint
-    if (block.crackLevel > 0.5) {
+    // Damage tint (not for squishy)
+    if (block.mat !== 'squishy' && block.crackLevel > 0.5) {
       c.fillStyle = `rgba(0,0,0,${(block.crackLevel - 0.5) * 0.3})`;
       c.fillRect(block.x, block.y, block.w, block.h);
     }
@@ -787,7 +1005,6 @@ function drawDebris() {
 }
 
 function drawCursor() {
-  // Custom crosshair
   c.save();
   c.translate(mouseX, mouseY);
   c.strokeStyle = mouseDown ? `rgba(255,${Math.floor(150 - powerGlow * 150)},0,0.8)` : 'rgba(255,255,255,0.5)';
@@ -805,26 +1022,136 @@ function drawCursor() {
 // ── HUD ──
 function updateHUD() {
   document.getElementById('h-score').textContent = score;
+  document.getElementById('h-points').textContent = points;
   const pct = totalBlocks > 0 ? Math.floor((brokenBlocks / totalBlocks) * 100) : 0;
   document.getElementById('h-pct').textContent = pct + '%';
-  document.getElementById('destruction-fill').style.width = pct + '%';
+  document.getElementById('destruction-fill').style.width = Math.min(pct, 100) + '%';
 
-  if (pct >= 90 && blocks.length > 0) {
-    // Almost done — let them know
+  if (pct >= 90 && !levelComplete) {
+    levelComplete = true;
+    showLevelComplete();
   }
-  if (blocks.every(b => b.hp <= 0) || blocks.length === 0) {
-    showNextLevel();
-  }
+}
+
+function showLevelComplete() {
+  // Show "LEVEL COMPLETE!" banner
+  const banner = document.getElementById('level-banner');
+  document.getElementById('lb-title').textContent = 'LEVEL COMPLETE!';
+  document.getElementById('lb-sub').textContent = `${brokenBlocks}/${totalBlocks} blocks destroyed`;
+  banner.style.display = 'block';
+
+  // After 1.5 seconds, show upgrade screen
+  setTimeout(() => {
+    banner.style.display = 'none';
+    showUpgradeScreen();
+  }, 1500);
 }
 
 function showNextLevel() {
   document.getElementById('next-btn').style.display = 'block';
 }
 
+// ── UPGRADE SCREEN ──
+function showUpgradeScreen() {
+  gamePaused = true;
+  const screen = document.getElementById('upgrade-screen');
+  screen.classList.add('visible');
+  renderUpgradeCards();
+}
+
+function closeUpgradeScreen() {
+  const screen = document.getElementById('upgrade-screen');
+  screen.classList.remove('visible');
+  gamePaused = false;
+  // Advance to next level
+  const next = currentLevel + 1;
+  if (next < LEVELS.length) {
+    loadLevel(next);
+  } else {
+    // All levels done — show victory and restart
+    const banner = document.getElementById('level-banner');
+    document.getElementById('lb-title').textContent = 'YOU WIN!';
+    document.getElementById('lb-sub').textContent = 'All levels destroyed! Starting over with upgrades...';
+    banner.style.display = 'block';
+    setTimeout(() => {
+      banner.style.display = 'none';
+      loadLevel(0);
+    }, 3000);
+  }
+}
+
+function renderUpgradeCards() {
+  document.getElementById('up-points').textContent = '💰 ' + points;
+  const grid = document.getElementById('up-grid');
+  grid.innerHTML = '';
+
+  Object.keys(UPGRADES).forEach(key => {
+    const up = UPGRADES[key];
+    const level = upgradeLevels[key];
+    const maxed = level >= up.tiers.length - 1;
+    const cost = maxed ? 0 : up.costs[level];
+
+    const card = document.createElement('div');
+    card.className = 'up-card';
+    card.innerHTML = `
+      <div class="icon">${up.icon}</div>
+      <div class="name">${up.name}</div>
+      <div class="tier">${maxed ? 'MAX' : 'LVL ' + level + '/' + (up.tiers.length - 1)}</div>
+      <div class="pips">${Array.from({length: up.tiers.length - 1}, (_, i) =>
+        `<div class="pip${i < level ? ' filled' : ''}"></div>`
+      ).join('')}</div>
+      <button class="buy-btn${maxed ? ' maxed' : ''}" data-key="${key}" data-cost="${cost}">
+        ${maxed ? 'MAX' : '💰 ' + cost}
+      </button>
+    `;
+    grid.appendChild(card);
+
+    if (!maxed) {
+      const btn = card.querySelector('.buy-btn');
+      btn.addEventListener('click', () => buyUpgrade(key));
+      btn.addEventListener('touchstart', (e) => { e.preventDefault(); buyUpgrade(key); });
+    }
+  });
+}
+
+function buyUpgrade(key) {
+  const up = UPGRADES[key];
+  const level = upgradeLevels[key];
+  if (level >= up.tiers.length - 1) return;
+
+  const cost = up.costs[level];
+  if (points < cost) {
+    // Shake the button and flash red
+    const btn = document.querySelector(`.buy-btn[data-key="${key}"]`);
+    if (btn) {
+      btn.style.background = 'linear-gradient(135deg, #FF4757, #FF2020)';
+      btn.classList.remove('shake');
+      void btn.offsetWidth; // force reflow
+      btn.classList.add('shake');
+      setTimeout(() => {
+        btn.style.background = '';
+      }, 400);
+    }
+    return;
+  }
+
+  points -= cost;
+  upgradeLevels[key] = level + 1;
+
+  // Apply upgrades immediately
+  ballRadius = getUpgradeValue('ballSize');
+  if (key === 'chainLen') {
+    initChain();
+  }
+
+  updateHUD();
+  renderUpgradeCards();
+}
+
 // ── LEVELS ──
 const LEVELS = [
   {
-    name: 'Glass Tower', sub: 'So fragile... so satisfying 🫙',
+    name: 'Glass Tower', sub: 'So fragile... so satisfying',
     build: () => {
       const cx = W / 2;
       const ground = H - 60;
@@ -841,49 +1168,110 @@ const LEVELS = [
     }
   },
   {
-    name: 'Wooden Cabin', sub: 'Chop chop! 🪵',
+    name: 'Jelly Garden', sub: 'Squish them all!',
+    build: () => {
+      const cx = W / 2;
+      const ground = H - 60;
+      const bw = 50, bh = 30;
+      // Scattered squishy blocks in a fun pattern
+      const positions = [
+        [-2, 0], [-1, 0], [0, 0], [1, 0], [2, 0],
+        [-1.5, 1], [-0.5, 1], [0.5, 1], [1.5, 1],
+        [-2, 2], [-1, 2], [0, 2], [1, 2], [2, 2],
+        [-0.5, 3], [0.5, 3],
+        [-1.5, 3], [1.5, 3],
+        [-1, 4], [0, 4], [1, 4],
+        [0, 5], [-0.5, 5.5], [0.5, 5.5],
+      ];
+      positions.forEach(([col, row]) => {
+        blocks.push(createBlock(
+          cx + col * bw - bw / 2, ground - (row + 1) * bh, bw - 2, bh - 2, 'squishy'
+        ));
+      });
+    }
+  },
+  {
+    name: 'Wooden Cabin', sub: 'Chop chop!',
     build: () => {
       const cx = W / 2;
       const ground = H - 60;
       const bw = 70, bh = 25;
-      // Walls
       for (let r = 0; r < 6; r++) {
         blocks.push(createBlock(cx - 140, ground - (r+1)*bh, bw-2, bh-2, 'wood'));
         blocks.push(createBlock(cx + 70, ground - (r+1)*bh, bw-2, bh-2, 'wood'));
       }
-      // Windows (glass)
       for (let r = 1; r < 4; r++) {
         blocks.push(createBlock(cx - 68, ground - (r+1)*bh, bw-2, bh-2, 'glass'));
         blocks.push(createBlock(cx, ground - (r+1)*bh, bw-2, bh-2, 'glass'));
       }
-      // Roof
       for (let i = 0; i < 5; i++) {
         blocks.push(createBlock(cx - 160 + i * 70, ground - 7*bh, 68, bh-2, 'wood'));
       }
-      // Roof peak
       for (let i = 0; i < 3; i++) {
         blocks.push(createBlock(cx - 90 + i * 70, ground - 8*bh, 68, bh-2, 'wood'));
       }
     }
   },
   {
-    name: 'Brick Fortress', sub: 'This one\'s tough! 🧱',
+    name: 'Glass Bridge', sub: 'Walk carefully...',
+    build: () => {
+      const cx = W / 2;
+      const ground = H - 60;
+      const bw = 50, bh = 25;
+      // Two wood support columns
+      for (let r = 0; r < 5; r++) {
+        blocks.push(createBlock(cx - 200, ground - (r+1)*bh, bw-2, bh-2, 'wood'));
+        blocks.push(createBlock(cx + 150, ground - (r+1)*bh, bw-2, bh-2, 'wood'));
+      }
+      // Wide glass bridge deck
+      for (let col = 0; col < 8; col++) {
+        blocks.push(createBlock(cx - 200 + col * bw, ground - 6*bh, bw-2, bh-2, 'glass'));
+        blocks.push(createBlock(cx - 200 + col * bw, ground - 7*bh, bw-2, bh-2, 'glass'));
+      }
+      // Glass railings
+      for (let col = 0; col < 8; col += 2) {
+        blocks.push(createBlock(cx - 200 + col * bw, ground - 8*bh, bw-2, bh-2, 'glass'));
+      }
+    }
+  },
+  {
+    name: 'Squishy Surprise', sub: 'What\'s inside?!',
+    build: () => {
+      const cx = W / 2;
+      const ground = H - 60;
+      const bw = 50, bh = 25;
+      // Outer shell of wood and brick
+      for (let r = 0; r < 6; r++) {
+        blocks.push(createBlock(cx - 125, ground - (r+1)*bh, bw-2, bh-2, r < 3 ? 'brick' : 'wood'));
+        blocks.push(createBlock(cx + 75, ground - (r+1)*bh, bw-2, bh-2, r < 3 ? 'brick' : 'wood'));
+      }
+      // Top cap
+      for (let col = 0; col < 4; col++) {
+        blocks.push(createBlock(cx - 125 + col * bw, ground - 7*bh, bw-2, bh-2, 'wood'));
+      }
+      // Hidden squishy center
+      for (let r = 0; r < 5; r++) {
+        blocks.push(createBlock(cx - 75, ground - (r+1)*bh, bw-2, bh-2, 'squishy'));
+        blocks.push(createBlock(cx - 25, ground - (r+1)*bh, bw-2, bh-2, 'squishy'));
+        blocks.push(createBlock(cx + 25, ground - (r+1)*bh, bw-2, bh-2, 'squishy'));
+      }
+    }
+  },
+  {
+    name: 'Brick Fortress', sub: 'This one\'s tough!',
     build: () => {
       const cx = W / 2;
       const ground = H - 60;
       const bw = 55, bh = 28;
-      // Base wall
       for (let r = 0; r < 5; r++) {
         for (let col = 0; col < 6; col++) {
           blocks.push(createBlock(cx - 165 + col*bw, ground-(r+1)*bh, bw-2, bh-2, 'brick'));
         }
       }
-      // Towers
       for (let r = 5; r < 9; r++) {
         blocks.push(createBlock(cx - 165, ground-(r+1)*bh, bw-2, bh-2, 'brick'));
         blocks.push(createBlock(cx - 165 + 5*bw, ground-(r+1)*bh, bw-2, bh-2, 'brick'));
       }
-      // Glass windows in middle
       for (let r = 1; r < 4; r++) {
         for (let col = 2; col < 4; col++) {
           const bk = blocks.find(b => Math.abs(b.x - (cx - 165 + col*bw)) < 5 && Math.abs(b.y - (ground-(r+1)*bh)) < 5);
@@ -893,7 +1281,57 @@ const LEVELS = [
     }
   },
   {
-    name: 'The Grand Castle', sub: 'Bring. It. Down. 🏰',
+    name: 'Treehouse', sub: 'Timber! Watch for the fruit!',
+    build: () => {
+      const cx = W / 2;
+      const ground = H - 60;
+      const bw = 45, bh = 22;
+      // Tall narrow trunk
+      for (let r = 0; r < 10; r++) {
+        blocks.push(createBlock(cx - bw, ground - (r+1)*bh, bw-2, bh-2, 'wood'));
+        blocks.push(createBlock(cx, ground - (r+1)*bh, bw-2, bh-2, 'wood'));
+      }
+      // Glass platforms
+      for (let col = -2; col <= 2; col++) {
+        blocks.push(createBlock(cx + col * bw - bw/2, ground - 5*bh, bw-2, bh-2, 'glass'));
+        blocks.push(createBlock(cx + col * bw - bw/2, ground - 8*bh, bw-2, bh-2, 'glass'));
+      }
+      // Squishy "fruit" on top
+      for (let col = -1; col <= 1; col++) {
+        blocks.push(createBlock(cx + col * bw - bw/2, ground - 11*bh, bw-2, bh-2, 'squishy'));
+        blocks.push(createBlock(cx + col * bw - bw/2, ground - 12*bh, bw-2, bh-2, 'squishy'));
+      }
+    }
+  },
+  {
+    name: 'Stone Bunker', sub: 'Thick walls, tiny windows',
+    build: () => {
+      const cx = W / 2;
+      const ground = H - 60;
+      const bw = 55, bh = 28;
+      // Wide low stone structure
+      for (let r = 0; r < 4; r++) {
+        for (let col = 0; col < 8; col++) {
+          blocks.push(createBlock(cx - 220 + col*bw, ground-(r+1)*bh, bw-2, bh-2, 'stone'));
+        }
+      }
+      // Small glass windows (replace some inner stone)
+      const windowPositions = [[2, 2], [5, 2], [3, 3], [4, 3]];
+      windowPositions.forEach(([col, row]) => {
+        const bk = blocks.find(b =>
+          Math.abs(b.x - (cx - 220 + col*bw)) < 5 &&
+          Math.abs(b.y - (ground-(row+1)*bh)) < 5
+        );
+        if (bk) { bk.mat = 'glass'; bk.hp = MAT.glass.hp; bk.maxHp = MAT.glass.hp; }
+      });
+      // Top row
+      for (let col = 0; col < 8; col++) {
+        blocks.push(createBlock(cx - 220 + col*bw, ground-5*bh, bw-2, bh-2, 'stone'));
+      }
+    }
+  },
+  {
+    name: 'Grand Castle', sub: 'Bring. It. Down.',
     build: () => {
       const cx = W / 2;
       const ground = H - 60;
@@ -928,27 +1366,110 @@ const LEVELS = [
       blocks.push(createBlock(cx - 192, ground - 12*bh, bw-2, bh-2, 'glass'));
       blocks.push(createBlock(cx - 192 + 7*bw, ground - 12*bh, bw-2, bh-2, 'glass'));
       blocks.push(createBlock(cx - bw/2, ground - 11*bh, bw-2, bh-2, 'glass'));
+      // Squishy decorations on top
+      blocks.push(createBlock(cx - 192 + bw*0.5, ground - 12*bh, bw-2, bh-2, 'squishy'));
+      blocks.push(createBlock(cx - 192 + 6.5*bw, ground - 12*bh, bw-2, bh-2, 'squishy'));
+      blocks.push(createBlock(cx, ground - 11*bh, bw-2, bh-2, 'squishy'));
     }
   },
   {
-    name: 'MEGA TOWER', sub: 'Everything must go!! 💥💥💥',
+    name: 'The Pyramid', sub: 'Ancient mysteries within...',
+    build: () => {
+      const cx = W / 2;
+      const ground = H - 60;
+      const bw = 48, bh = 24;
+      // Stone base rows narrowing upward
+      const rows = 9;
+      for (let r = 0; r < rows; r++) {
+        const cols = rows - r;
+        const startX = cx - (cols * bw) / 2;
+        let mat;
+        if (r < 3) mat = 'stone';
+        else if (r < 6) mat = 'brick';
+        else mat = 'glass';
+        for (let col = 0; col < cols; col++) {
+          // Squishy core (inner blocks)
+          const isInner = col > 0 && col < cols - 1 && r > 1 && r < 6;
+          blocks.push(createBlock(
+            startX + col * bw, ground - (r + 1) * bh,
+            bw - 2, bh - 2,
+            isInner ? 'squishy' : mat
+          ));
+        }
+      }
+    }
+  },
+  {
+    name: 'Clock Tower', sub: 'It\'s clobberin\' time!',
     build: () => {
       const cx = W / 2;
       const ground = H - 60;
       const bw = 44, bh = 22;
-      const materials = ['stone', 'brick', 'brick', 'wood', 'wood', 'glass', 'glass'];
+      // Very tall, narrow, mixed materials
+      const materials = ['stone', 'stone', 'brick', 'brick', 'brick', 'wood', 'wood', 'wood', 'glass', 'glass', 'glass', 'glass', 'glass', 'glass'];
       for (let r = 0; r < 14; r++) {
-        const cols = Math.max(2, 7 - Math.floor(r / 2));
-        const mat = materials[Math.min(r, materials.length - 1)];
-        for (let col = 0; col < cols; col++) {
+        const mat = materials[r];
+        // Narrow: 3 columns
+        for (let col = 0; col < 3; col++) {
           blocks.push(createBlock(
-            cx - (cols * bw) / 2 + col * bw,
+            cx - 1.5 * bw + col * bw,
             ground - (r + 1) * bh,
-            bw - 2, bh - 2,
-            mat
+            bw - 2, bh - 2, mat
           ));
         }
       }
+      // Clock face at top - squishy
+      blocks.push(createBlock(cx - bw/2, ground - 15*bh, bw-2, bh-2, 'squishy'));
+      // Spire
+      blocks.push(createBlock(cx - bw/2, ground - 16*bh, bw-2, bh-2, 'glass'));
+    }
+  },
+  {
+    name: 'THE CITADEL', sub: 'The ultimate challenge!',
+    build: () => {
+      const cx = W / 2;
+      const ground = H - 60;
+      const bw = 42, bh = 21;
+      // Massive structure, all materials, dense
+      // Stone foundation (wide)
+      for (let r = 0; r < 3; r++) {
+        for (let col = 0; col < 10; col++) {
+          blocks.push(createBlock(cx - 210 + col*bw, ground-(r+1)*bh, bw-2, bh-2, 'stone'));
+        }
+      }
+      // Brick walls
+      for (let r = 3; r < 8; r++) {
+        for (let col = 0; col < 10; col++) {
+          // Glass windows in middle
+          const isWindow = (col >= 3 && col <= 6) && (r === 4 || r === 6);
+          blocks.push(createBlock(cx - 210 + col*bw, ground-(r+1)*bh, bw-2, bh-2, isWindow ? 'glass' : 'brick'));
+        }
+      }
+      // Wood upper section
+      for (let r = 8; r < 11; r++) {
+        for (let col = 1; col < 9; col++) {
+          blocks.push(createBlock(cx - 210 + col*bw, ground-(r+1)*bh, bw-2, bh-2, 'wood'));
+        }
+      }
+      // Towers (left and right)
+      for (let r = 8; r < 14; r++) {
+        blocks.push(createBlock(cx - 210, ground-(r+1)*bh, bw-2, bh-2, 'brick'));
+        blocks.push(createBlock(cx - 210 + 9*bw, ground-(r+1)*bh, bw-2, bh-2, 'brick'));
+      }
+      // Tower caps
+      blocks.push(createBlock(cx - 210, ground-15*bh, bw-2, bh-2, 'stone'));
+      blocks.push(createBlock(cx - 210 + 9*bw, ground-15*bh, bw-2, bh-2, 'stone'));
+      // Center spire
+      for (let r = 11; r < 15; r++) {
+        blocks.push(createBlock(cx - bw, ground-(r+1)*bh, bw-2, bh-2, 'wood'));
+        blocks.push(createBlock(cx, ground-(r+1)*bh, bw-2, bh-2, 'wood'));
+      }
+      blocks.push(createBlock(cx - bw/2, ground-16*bh, bw-2, bh-2, 'glass'));
+      // Squishy accents scattered
+      blocks.push(createBlock(cx - 210 + 4*bw, ground-9*bh, bw-2, bh-2, 'squishy'));
+      blocks.push(createBlock(cx - 210 + 5*bw, ground-9*bh, bw-2, bh-2, 'squishy'));
+      blocks.push(createBlock(cx - 210 + 4*bw, ground-10*bh, bw-2, bh-2, 'squishy'));
+      blocks.push(createBlock(cx - 210 + 5*bw, ground-10*bh, bw-2, bh-2, 'squishy'));
     }
   }
 ];
@@ -956,9 +1477,16 @@ const LEVELS = [
 function loadLevel(idx) {
   blocks = [];
   debris = [];
+  splatters = [];
   brokenBlocks = 0;
+  levelComplete = false;
+  levelScore = 0;
   currentLevel = idx;
   document.getElementById('next-btn').style.display = 'none';
+
+  // Apply current upgrades
+  ballRadius = getUpgradeValue('ballSize');
+  initChain();
 
   LEVELS[idx].build();
   totalBlocks = blocks.length;
@@ -974,8 +1502,12 @@ function loadLevel(idx) {
 }
 
 function nextLevel() {
-  const next = (currentLevel + 1) % LEVELS.length;
-  loadLevel(next);
+  const next = currentLevel + 1;
+  if (next < LEVELS.length) {
+    loadLevel(next);
+  } else {
+    loadLevel(0);
+  }
 }
 
 // ── MAIN LOOP ──
@@ -984,17 +1516,22 @@ function loop(ts) {
   if (!gameRunning) return;
   const dt = Math.min((ts - lastTime) / 1000, 0.05);
   lastTime = ts;
+  gameTime += dt;
 
-  updateChain();
-  ballBlockCollision();
-  updateBlocks();
-  updateDebris();
-  updateShake();
+  if (!gamePaused) {
+    updateChain();
+    ballBlockCollision();
+    updateBlocks();
+    updateDebris();
+    updateSplatters();
+    updateShake();
+  }
 
   c.save();
   c.translate(shakeX, shakeY);
 
   drawBackground();
+  drawSplatters();
   drawDebris();
   drawBlocks();
   drawChain();
@@ -1021,8 +1558,14 @@ function init() {
   setTimeout(() => document.getElementById('splash').style.display = 'none', 700);
   document.getElementById('hud').style.display = 'flex';
 
+  // Reset upgrades on fresh start
+  upgradeLevels = { ballSize: 0, ballWeight: 0, powerMode: 0, chainLen: 0 };
+  points = 0;
+  score = 0;
+
   initChain();
   gameRunning = true;
+  gamePaused = false;
   lastTime = performance.now();
   loadLevel(0);
   requestAnimationFrame(loop);

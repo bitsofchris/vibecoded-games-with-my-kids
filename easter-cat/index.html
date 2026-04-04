@@ -6,254 +6,143 @@
 <title>Easter Egg Cat</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;800&display=swap');
-
   * { margin: 0; padding: 0; box-sizing: border-box; }
-
   body {
-    background: #1a0a2e;
+    background: #87CEEB;
     overflow: hidden;
     touch-action: none;
     user-select: none;
     -webkit-user-select: none;
     font-family: 'Nunito', sans-serif;
   }
-
-  canvas {
-    display: block;
-    width: 100vw;
-    height: 100vh;
-  }
-
+  canvas { display: block; }
   .home-btn {
-    position: fixed;
-    top: 12px;
-    left: 12px;
-    z-index: 1000;
-    text-decoration: none;
-    font-size: 28px;
-    background: rgba(255,255,255,0.15);
-    border: 1px solid rgba(255,255,255,0.25);
-    border-radius: 50%;
-    width: 44px;
-    height: 44px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    touch-action: manipulation;
-    backdrop-filter: blur(8px);
+    position: fixed; top: 12px; left: 12px; z-index: 1000;
+    text-decoration: none; font-size: 28px;
+    background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3);
+    border-radius: 50%; width: 44px; height: 44px;
+    display: flex; align-items: center; justify-content: center;
+    touch-action: manipulation; backdrop-filter: blur(8px);
   }
-
   #ui-overlay {
-    position: fixed;
-    top: 12px;
-    right: 16px;
-    z-index: 100;
-    display: none;
-    gap: 10px;
-    flex-direction: column;
-    align-items: flex-end;
+    position: fixed; top: 12px; right: 16px; z-index: 100;
+    display: none; gap: 10px; flex-direction: column; align-items: flex-end;
   }
-
   #ui-overlay.active { display: flex; }
-
   .ui-badge {
-    font-family: 'Fredoka One', cursive;
-    font-size: 18px;
-    color: #fff;
-    background: rgba(0,0,0,0.4);
-    backdrop-filter: blur(8px);
-    padding: 6px 14px;
-    border-radius: 20px;
-    border: 2px solid rgba(255,255,255,0.15);
-    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
-    white-space: nowrap;
+    font-family: 'Fredoka One', cursive; font-size: 18px; color: #fff;
+    background: rgba(0,0,0,0.35); backdrop-filter: blur(8px);
+    padding: 6px 14px; border-radius: 20px;
+    border: 2px solid rgba(255,255,255,0.2);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5); white-space: nowrap;
   }
-
-  .egg-count { border-color: rgba(255,182,193,0.4); }
-  .level-badge { border-color: rgba(255,223,100,0.4); }
-
+  .egg-count { border-color: rgba(255,182,193,0.5); }
+  .level-badge { border-color: rgba(255,223,100,0.5); }
+  .progress-bar-container {
+    position: fixed; bottom: 16px; left: 50%; transform: translateX(-50%);
+    z-index: 100; display: none; width: min(80vw, 400px);
+  }
+  .progress-bar-container.active { display: block; }
+  .progress-bar-bg {
+    width: 100%; height: 22px;
+    background: rgba(0,0,0,0.35); border-radius: 12px;
+    border: 2px solid rgba(255,255,255,0.2); overflow: hidden;
+    backdrop-filter: blur(8px);
+  }
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff9a9e, #fad0c4, #a18cd1, #B5EAD7);
+    border-radius: 10px; transition: width 0.3s ease; width: 0%;
+  }
+  .progress-label {
+    text-align: center; font-family: 'Fredoka One', cursive;
+    font-size: 12px; color: rgba(255,255,255,0.85); margin-top: 4px;
+    text-shadow: 0 1px 3px rgba(0,0,0,0.4);
+  }
   #screen-overlay {
-    position: fixed;
-    inset: 0;
-    z-index: 200;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    background: rgba(20,10,40,0.85);
-    backdrop-filter: blur(12px);
+    position: fixed; inset: 0; z-index: 200;
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    background: rgba(20,10,40,0.85); backdrop-filter: blur(12px);
     transition: opacity 0.3s;
   }
-
-  #screen-overlay.hidden {
-    opacity: 0;
-    pointer-events: none;
-  }
-
+  #screen-overlay.hidden { opacity: 0; pointer-events: none; }
   .screen-title {
     font-family: 'Fredoka One', cursive;
-    font-size: clamp(2.2rem, 7vw, 4rem);
-    color: #fff;
+    font-size: clamp(2.2rem, 7vw, 4rem); color: #fff;
     text-shadow: 0 3px 20px rgba(255,150,200,0.5), 0 0 40px rgba(255,200,100,0.3);
-    margin-bottom: 8px;
-    text-align: center;
-    line-height: 1.1;
+    margin-bottom: 8px; text-align: center; line-height: 1.1;
   }
-
   .screen-subtitle {
     font-family: 'Nunito', sans-serif;
-    font-size: clamp(1rem, 3vw, 1.3rem);
-    color: rgba(255,255,255,0.7);
-    margin-bottom: 30px;
-    text-align: center;
-    max-width: 400px;
-    line-height: 1.5;
+    font-size: clamp(1rem, 3vw, 1.3rem); color: rgba(255,255,255,0.7);
+    margin-bottom: 30px; text-align: center; max-width: 400px; line-height: 1.5;
   }
-
   .screen-emoji {
-    font-size: clamp(3rem, 10vw, 5rem);
-    margin-bottom: 16px;
+    font-size: clamp(3rem, 10vw, 5rem); margin-bottom: 16px;
     animation: bounce 1.5s ease-in-out infinite;
   }
-
   @keyframes bounce {
     0%, 100% { transform: translateY(0); }
     50% { transform: translateY(-12px); }
   }
-
   .btn {
-    font-family: 'Fredoka One', cursive;
-    font-size: 1.1rem;
-    border: none;
-    border-radius: 30px;
-    padding: 14px 40px;
-    cursor: pointer;
-    transition: transform 0.15s, box-shadow 0.15s;
-    letter-spacing: 1px;
-    touch-action: manipulation;
-    margin: 6px;
+    font-family: 'Fredoka One', cursive; font-size: 1.1rem;
+    border: none; border-radius: 30px; padding: 14px 40px;
+    cursor: pointer; transition: transform 0.15s, box-shadow 0.15s;
+    letter-spacing: 1px; touch-action: manipulation; margin: 6px;
   }
-
   .btn:hover { transform: scale(1.05); }
   .btn:active { transform: scale(0.97); }
-
   .btn-primary {
-    background: linear-gradient(135deg, #ff7eb3, #ff758c);
-    color: #fff;
+    background: linear-gradient(135deg, #ff7eb3, #ff758c); color: #fff;
     box-shadow: 0 4px 20px rgba(255,120,160,0.4);
   }
-
   .btn-secondary {
-    background: rgba(255,255,255,0.1);
-    color: #fff;
+    background: rgba(255,255,255,0.1); color: #fff;
     border: 2px solid rgba(255,255,255,0.2);
   }
-
   .controls-help {
-    display: flex;
-    gap: 20px;
-    margin: 16px 0 24px;
-    flex-wrap: wrap;
-    justify-content: center;
+    display: flex; gap: 20px; margin: 16px 0 24px;
+    flex-wrap: wrap; justify-content: center;
   }
-
   .control-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    color: rgba(255,255,255,0.6);
-    font-size: 0.9rem;
+    display: flex; align-items: center; gap: 8px;
+    color: rgba(255,255,255,0.6); font-size: 0.9rem;
   }
-
   .key-icon {
-    background: rgba(255,255,255,0.12);
-    border: 1px solid rgba(255,255,255,0.2);
-    border-radius: 6px;
-    padding: 4px 10px;
-    font-family: 'Fredoka One', cursive;
-    font-size: 0.8rem;
-    color: #fff;
+    background: rgba(255,255,255,0.12); border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px; padding: 4px 10px; font-family: 'Fredoka One', cursive;
+    font-size: 0.8rem; color: #fff;
   }
-
   .level-announce {
     font-family: 'Fredoka One', cursive;
-    font-size: clamp(3rem, 10vw, 5rem);
-    color: #fff;
+    font-size: clamp(3rem, 10vw, 5rem); color: #fff;
     text-shadow: 0 3px 30px rgba(255,200,100,0.6);
     animation: levelPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
   }
-
   @keyframes levelPop {
     0% { transform: scale(0.3); opacity: 0; }
     100% { transform: scale(1); opacity: 1; }
   }
-
   .stats-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 12px;
-    margin: 16px 0 24px;
-    min-width: 260px;
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 12px; margin: 16px 0 24px; min-width: 260px;
   }
-
   .stat-box {
-    background: rgba(255,255,255,0.06);
-    border: 1px solid rgba(255,255,255,0.1);
-    border-radius: 12px;
-    padding: 12px;
-    text-align: center;
+    background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px; padding: 12px; text-align: center;
   }
-
-  .stat-val {
-    font-family: 'Fredoka One', cursive;
-    font-size: 1.5rem;
-    color: #ffcc70;
-  }
-
+  .stat-val { font-family: 'Fredoka One', cursive; font-size: 1.5rem; color: #ffcc70; }
   .stat-label {
-    font-size: 0.75rem;
-    color: rgba(255,255,255,0.5);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin-top: 2px;
+    font-size: 0.75rem; color: rgba(255,255,255,0.5);
+    text-transform: uppercase; letter-spacing: 1px; margin-top: 2px;
   }
-
-  .progress-bar-container {
-    position: fixed;
-    bottom: 16px;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 100;
-    display: none;
-    width: min(80vw, 400px);
-  }
-
-  .progress-bar-container.active { display: block; }
-
-  .progress-bar-bg {
-    width: 100%;
-    height: 20px;
-    background: rgba(0,0,0,0.4);
-    border-radius: 12px;
-    border: 2px solid rgba(255,255,255,0.15);
-    overflow: hidden;
-    backdrop-filter: blur(8px);
-  }
-
-  .progress-bar-fill {
-    height: 100%;
-    background: linear-gradient(90deg, #ff9a9e, #fad0c4, #a18cd1);
-    border-radius: 10px;
-    transition: width 0.3s ease;
-    width: 0%;
-  }
-
-  .progress-label {
-    text-align: center;
-    font-family: 'Fredoka One', cursive;
-    font-size: 12px;
-    color: rgba(255,255,255,0.7);
-    margin-top: 4px;
+  #combo-display {
+    position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
+    z-index: 150; pointer-events: none; text-align: center;
+    font-family: 'Fredoka One', cursive; font-size: 2rem; color: #FFD700;
+    text-shadow: 0 2px 10px rgba(0,0,0,0.5);
+    opacity: 0; transition: opacity 0.2s;
   }
 </style>
 </head>
@@ -264,7 +153,7 @@
 <canvas id="game"></canvas>
 
 <div id="ui-overlay">
-  <div class="ui-badge egg-count" id="egg-badge">&#x1F95A; 0 / 10</div>
+  <div class="ui-badge egg-count" id="egg-badge">&#x1F95A; 0 / 12</div>
   <div class="ui-badge level-badge" id="level-badge">Level 1</div>
 </div>
 
@@ -272,551 +161,497 @@
   <div class="progress-bar-bg">
     <div class="progress-bar-fill" id="progress-fill"></div>
   </div>
-  <div class="progress-label" id="progress-label">0 / 10 eggs</div>
+  <div class="progress-label" id="progress-label">0 / 12 eggs</div>
 </div>
+
+<div id="combo-display"></div>
 
 <div id="screen-overlay">
   <div id="screen-content"></div>
 </div>
 
+<!-- Three.js -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+
 <script>
-// ─── GAME CONFIG ───
+// ═══════════════════════════════════════════════════════
+// EASTER EGG CAT - Temple Run / Subway Surfer style
+// ═══════════════════════════════════════════════════════
+
 const CONFIG = {
-  lanes: [-1.5, 0, 1.5],
-  laneWidth: 1.2,
-  scrollSpeed: 4.5,
-  spawnInterval: 0.5,
-  catSize: 50,
-  eggSize: 32,
-  obstacleSize: 40,
-  eggColors: ['#FF9AA2', '#FFB7B2', '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA', '#DCD3FF', '#FFF1BA'],
-  eggPatterns: ['dots', 'stripes', 'zigzag', 'stars', 'plain'],
-  grassColor: '#7EC850',
-  skyTop: '#87CEEB',
-  skyBottom: '#E0F4FF',
-  flowerColors: ['#FF6B8A', '#FFD93D', '#FF8ED4', '#9B6BFF', '#FF9E5E', '#fff'],
-  levelEggs: level => 8 + level * 4,
-  levelSpeed: level => 4.5 + level * 0.3,
+  LANES: [-2, 0, 2],
+  LANE_SWITCH_MS: 150,
+  FORWARD_SPEED: 0.20,
+  ROW_SPACING: 6,
+  SPAWN_AHEAD: 60,
+  DESPAWN_BEHIND: 12,
+  COLLISION_Z: 1.5,
+  STUN_MS: 600,
+  CAMERA: { fov: 70, offsetY: 4.5, offsetZ: 7, lookAheadZ: -6 },
+
+  levelEggs: lvl => 10 + (lvl - 1) * 3,
+  levelSpeed: lvl => 0.20 + (lvl - 1) * 0.015,
+  levelLength: lvl => Math.min(150 * Math.pow(1.12, lvl - 1), 600),
   maxLevel: 10,
+
+  EGG_COLORS: [0xFF9AA2, 0xFFB7B2, 0xFFDAC1, 0xE2F0CB, 0xB5EAD7, 0xC7CEEA, 0xDCD3FF, 0xFFF1BA],
+  FLOWER_COLORS: [0xFF6B8A, 0xFFD93D, 0xFF8ED4, 0x9B6BFF, 0xFF9E5E, 0xFFFFFF],
+  GRASS_GREEN: 0x7EC850,
+  PATH_COLOR: 0xC2B280,
+  SKY_COLOR: 0x87CEEB,
+
+  PATTERNS: {
+    easy:   ['EXX','XEX','XXE','EXX','XEX','XXE','EEX','XEE'],
+    medium: ['EOX','XOE','OXE','EXO','XEO','OEX','EOX','OXE'],
+    hard:   ['OOX','XOO','OXO','OOE','EOO','OXO','OOX','XOO'],
+  },
+  DIFFICULTY: { easyPct: 0.60, medPct: 0.82 },
 };
 
 // ─── GAME STATE ───
-const canvas = document.getElementById('game');
-const ctx = canvas.getContext('2d');
-let W, H, scale;
-let gameState = 'title'; // title, playing, levelIntro, success, fail, win
+let renderer, scene, camera;
+let cat, catGroup;
+let gameState = 'title';
 let currentLevel = 1;
 let eggsCollected = 0;
 let eggsNeeded = CONFIG.levelEggs(1);
-let catLane = 1; // 0, 1, 2
-let catX, catY;
-let catTargetX;
-let catBobTimer = 0;
-let catStunTimer = 0;
-let scrollOffset = 0;
-let entities = [];
-let particles = [];
-let petals = [];
-let grassTufts = [];
-let bgFlowers = [];
-let clouds = [];
+let laneIndex = 1;
+let catX = 0, targetX = 0;
+let isTransitioning = false, transFromX = 0, transToX = 0, transStart = 0;
+let isStunned = false, stunEnd = 0;
+let forwardZ = 0;
+let nextRowZ = -10;
 let score = 0;
-let totalEggsAllLevels = 0;
-let inputCooldown = 0;
+let totalEggs = 0;
 let lastTime = 0;
-let comboTimer = 0;
-let comboCount = 0;
-let screenShake = 0;
-let flashTimer = 0;
-let flashColor = '';
+let comboCount = 0, comboTimer = 0;
 
-// ─── RESIZE ───
-function resize() {
-  W = canvas.width = window.innerWidth * window.devicePixelRatio;
-  H = canvas.height = window.innerHeight * window.devicePixelRatio;
-  canvas.style.width = window.innerWidth + 'px';
-  canvas.style.height = window.innerHeight + 'px';
-  scale = Math.min(W, H) / 600;
-  catY = H * 0.72;
-  updateCatTarget();
-}
-window.addEventListener('resize', resize);
-resize();
+// Entity arrays
+let eggs = [];
+let obstacles = [];
+let groundTiles = [];
+let flowers = [];
+let tailSegments = [];
+let particles = [];
 
-function updateCatTarget() {
-  catTargetX = W / 2 + CONFIG.lanes[catLane] * 80 * scale;
-  if (catX === undefined) catX = catTargetX;
-}
-updateCatTarget();
+// Touch
+let touchStartX = null;
 
-// ─── DRAWING HELPERS ───
-function drawEgg(x, y, size, color, pattern, rotation = 0) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.rotate(rotation);
+// Level data
+let levelRows = [];
+let levelLength = 150;
 
-  // Shadow
-  ctx.beginPath();
-  ctx.ellipse(0, size * 0.35, size * 0.3, size * 0.08, 0, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(0,0,0,0.15)';
-  ctx.fill();
+// ─── THREE.JS SETUP ───
+function initThree() {
+  const canvas = document.getElementById('game');
+  renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setClearColor(CONFIG.SKY_COLOR);
+  renderer.shadowMap.enabled = false;
 
-  // Egg shape
-  ctx.beginPath();
-  ctx.ellipse(0, 0, size * 0.38, size * 0.5, 0, 0, Math.PI * 2);
-  ctx.fillStyle = color;
-  ctx.fill();
+  scene = new THREE.Scene();
+  scene.fog = new THREE.Fog(CONFIG.SKY_COLOR, 40, 80);
 
-  // Shine
-  ctx.beginPath();
-  ctx.ellipse(-size * 0.1, -size * 0.15, size * 0.12, size * 0.2, -0.3, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(255,255,255,0.4)';
-  ctx.fill();
+  camera = new THREE.PerspectiveCamera(CONFIG.CAMERA.fov, window.innerWidth / window.innerHeight, 0.1, 200);
+  camera.position.set(0, CONFIG.CAMERA.offsetY, CONFIG.CAMERA.offsetZ);
+  camera.lookAt(0, 0, CONFIG.CAMERA.lookAheadZ);
 
-  // Pattern
-  ctx.globalAlpha = 0.35;
-  if (pattern === 'dots') {
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.arc(Math.cos(a) * size * 0.2, Math.sin(a) * size * 0.15, size * 0.05, 0, Math.PI * 2);
-      ctx.fillStyle = '#fff';
-      ctx.fill();
-    }
-  } else if (pattern === 'stripes') {
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = size * 0.06;
-    for (let i = -2; i <= 2; i++) {
-      ctx.beginPath();
-      ctx.moveTo(-size * 0.35, i * size * 0.15);
-      ctx.lineTo(size * 0.35, i * size * 0.15);
-      ctx.stroke();
-    }
-  } else if (pattern === 'zigzag') {
-    ctx.strokeStyle = '#fff';
-    ctx.lineWidth = size * 0.05;
-    ctx.beginPath();
-    for (let i = -3; i <= 3; i++) {
-      const yy = i * size * 0.12;
-      ctx.lineTo((i % 2 === 0 ? -1 : 1) * size * 0.2, yy);
-    }
-    ctx.stroke();
-  } else if (pattern === 'stars') {
-    ctx.fillStyle = '#fff';
-    for (let i = 0; i < 3; i++) {
-      const sx = (i - 1) * size * 0.2;
-      const sy = (i % 2 === 0 ? -1 : 1) * size * 0.1;
-      drawStar(sx, sy, size * 0.06, 5);
-    }
-  }
-  ctx.globalAlpha = 1;
+  // Lighting
+  const ambient = new THREE.AmbientLight(0xffffff, 0.65);
+  scene.add(ambient);
+  const sun = new THREE.DirectionalLight(0xFFF5E0, 0.85);
+  sun.position.set(5, 12, 5);
+  scene.add(sun);
 
-  ctx.restore();
+  // Hemisphere light for nice sky/ground bounce
+  const hemi = new THREE.HemisphereLight(0x87CEEB, 0x7EC850, 0.3);
+  scene.add(hemi);
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
 }
 
-function drawStar(x, y, r, points) {
-  ctx.beginPath();
-  for (let i = 0; i < points * 2; i++) {
-    const a = (i * Math.PI) / points - Math.PI / 2;
-    const radius = i % 2 === 0 ? r : r * 0.4;
-    const method = i === 0 ? 'moveTo' : 'lineTo';
-    ctx[method](x + Math.cos(a) * radius, y + Math.sin(a) * radius);
-  }
-  ctx.closePath();
-  ctx.fill();
-}
+// ─── CAT MODEL ───
+function createCat() {
+  catGroup = new THREE.Group();
 
-function drawCat(x, y, stunned, bobOffset) {
-  const s = CONFIG.catSize * scale;
-  ctx.save();
-  ctx.translate(x, y + bobOffset);
-
-  if (stunned) {
-    ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.02) * 0.3;
-  }
-
-  // Shadow
-  ctx.beginPath();
-  ctx.ellipse(0, s * 0.55, s * 0.45, s * 0.1, 0, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(0,0,0,0.15)';
-  ctx.fill();
+  const bodyColor = 0xFFE4B5;
+  const stripeColor = 0xF5D0A0;
+  const bellyColor = 0xFFF8EE;
+  const pinkColor = 0xFFB6C1;
+  const darkColor = 0x2C2C2C;
 
   // Body
-  ctx.beginPath();
-  ctx.ellipse(0, s * 0.15, s * 0.38, s * 0.35, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#FFE4B5';
-  ctx.fill();
+  const bodyGeo = new THREE.SphereGeometry(0.38, 16, 12);
+  bodyGeo.scale(1, 0.85, 1.3);
+  const bodyMat = new THREE.MeshLambertMaterial({ color: bodyColor });
+  const body = new THREE.Mesh(bodyGeo, bodyMat);
+  body.position.y = 0.5;
+  catGroup.add(body);
 
   // Belly
-  ctx.beginPath();
-  ctx.ellipse(0, s * 0.22, s * 0.25, s * 0.22, 0, 0, Math.PI * 2);
-  ctx.fillStyle = '#FFF8EE';
-  ctx.fill();
+  const bellyGeo = new THREE.SphereGeometry(0.26, 12, 8);
+  bellyGeo.scale(0.9, 0.5, 1.1);
+  const bellyMat = new THREE.MeshLambertMaterial({ color: bellyColor });
+  const belly = new THREE.Mesh(bellyGeo, bellyMat);
+  belly.position.set(0, 0.35, 0);
+  catGroup.add(belly);
 
   // Head
-  ctx.beginPath();
-  ctx.arc(0, -s * 0.2, s * 0.32, 0, Math.PI * 2);
-  ctx.fillStyle = '#FFE4B5';
-  ctx.fill();
+  const headGeo = new THREE.SphereGeometry(0.3, 16, 16);
+  const headMat = new THREE.MeshLambertMaterial({ color: bodyColor });
+  const head = new THREE.Mesh(headGeo, headMat);
+  head.position.set(0, 0.75, -0.4);
+  catGroup.add(head);
+
+  // Cheeks
+  const cheekGeo = new THREE.SphereGeometry(0.12, 8, 8);
+  const cheekMat = new THREE.MeshLambertMaterial({ color: bellyColor });
+  [-1, 1].forEach(side => {
+    const cheek = new THREE.Mesh(cheekGeo, cheekMat);
+    cheek.position.set(side * 0.17, 0.65, -0.52);
+    catGroup.add(cheek);
+  });
 
   // Ears
-  for (const side of [-1, 1]) {
-    ctx.beginPath();
-    ctx.moveTo(side * s * 0.15, -s * 0.45);
-    ctx.lineTo(side * s * 0.3, -s * 0.65);
-    ctx.lineTo(side * s * 0.35, -s * 0.4);
-    ctx.closePath();
-    ctx.fillStyle = '#FFE4B5';
-    ctx.fill();
-    // Inner ear
-    ctx.beginPath();
-    ctx.moveTo(side * s * 0.19, -s * 0.46);
-    ctx.lineTo(side * s * 0.28, -s * 0.6);
-    ctx.lineTo(side * s * 0.32, -s * 0.42);
-    ctx.closePath();
-    ctx.fillStyle = '#FFB6C1';
-    ctx.fill();
-  }
+  const earGeo = new THREE.ConeGeometry(0.1, 0.22, 4);
+  const earMat = new THREE.MeshLambertMaterial({ color: bodyColor });
+  const innerEarGeo = new THREE.ConeGeometry(0.06, 0.14, 4);
+  const innerEarMat = new THREE.MeshLambertMaterial({ color: pinkColor });
+  [-1, 1].forEach(side => {
+    const ear = new THREE.Mesh(earGeo, earMat);
+    ear.position.set(side * 0.2, 1.05, -0.35);
+    ear.rotation.z = side * 0.2;
+    catGroup.add(ear);
+    const inner = new THREE.Mesh(innerEarGeo, innerEarMat);
+    inner.position.set(side * 0.2, 1.03, -0.34);
+    inner.rotation.z = side * 0.2;
+    catGroup.add(inner);
+  });
 
   // Eyes
-  const eyeY = -s * 0.22;
-  const blinkPhase = Math.sin(Date.now() * 0.003);
-  const eyeOpenness = blinkPhase > 0.95 ? 0.1 : 1;
-  for (const side of [-1, 1]) {
-    // White
-    ctx.beginPath();
-    ctx.ellipse(side * s * 0.12, eyeY, s * 0.1, s * 0.1 * eyeOpenness, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#fff';
-    ctx.fill();
-    // Pupil
-    if (eyeOpenness > 0.3) {
-      ctx.beginPath();
-      ctx.arc(side * s * 0.12, eyeY, s * 0.05, 0, Math.PI * 2);
-      ctx.fillStyle = '#2C2C2C';
-      ctx.fill();
-      // Glint
-      ctx.beginPath();
-      ctx.arc(side * s * 0.1, eyeY - s * 0.02, s * 0.02, 0, Math.PI * 2);
-      ctx.fillStyle = '#fff';
-      ctx.fill();
-    }
-  }
+  const eyeWhiteGeo = new THREE.SphereGeometry(0.07, 8, 8);
+  const eyeWhiteMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF });
+  const pupilGeo = new THREE.SphereGeometry(0.04, 8, 8);
+  const pupilMat = new THREE.MeshLambertMaterial({ color: darkColor });
+  [-1, 1].forEach(side => {
+    const eyeWhite = new THREE.Mesh(eyeWhiteGeo, eyeWhiteMat);
+    eyeWhite.position.set(side * 0.12, 0.78, -0.62);
+    catGroup.add(eyeWhite);
+    const pupil = new THREE.Mesh(pupilGeo, pupilMat);
+    pupil.position.set(side * 0.12, 0.78, -0.66);
+    catGroup.add(pupil);
+  });
 
   // Nose
-  ctx.beginPath();
-  ctx.moveTo(0, -s * 0.12);
-  ctx.lineTo(-s * 0.04, -s * 0.08);
-  ctx.lineTo(s * 0.04, -s * 0.08);
-  ctx.closePath();
-  ctx.fillStyle = '#FFB6C1';
-  ctx.fill();
-
-  // Mouth
-  ctx.beginPath();
-  ctx.moveTo(0, -s * 0.08);
-  ctx.quadraticCurveTo(-s * 0.06, -s * 0.02, -s * 0.1, -s * 0.05);
-  ctx.moveTo(0, -s * 0.08);
-  ctx.quadraticCurveTo(s * 0.06, -s * 0.02, s * 0.1, -s * 0.05);
-  ctx.strokeStyle = '#C08060';
-  ctx.lineWidth = 1.5 * scale;
-  ctx.stroke();
-
-  // Whiskers
-  for (const side of [-1, 1]) {
-    for (const angle of [-0.15, 0, 0.15]) {
-      ctx.beginPath();
-      ctx.moveTo(side * s * 0.15, -s * 0.1);
-      ctx.lineTo(side * s * 0.45, -s * 0.1 + angle * s);
-      ctx.strokeStyle = 'rgba(150,120,80,0.4)';
-      ctx.lineWidth = 1 * scale;
-      ctx.stroke();
-    }
-  }
+  const noseGeo = new THREE.SphereGeometry(0.03, 6, 6);
+  const noseMat = new THREE.MeshLambertMaterial({ color: pinkColor });
+  const nose = new THREE.Mesh(noseGeo, noseMat);
+  nose.position.set(0, 0.7, -0.68);
+  catGroup.add(nose);
 
   // Tail
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.3, s * 0.2);
-  const tailWag = Math.sin(Date.now() * 0.005) * s * 0.15;
-  ctx.quadraticCurveTo(-s * 0.6, s * 0.0 + tailWag, -s * 0.45, -s * 0.2 + tailWag);
-  ctx.strokeStyle = '#FFE4B5';
-  ctx.lineWidth = s * 0.12;
-  ctx.lineCap = 'round';
-  ctx.stroke();
+  const tailCurve = new THREE.CatmullRomCurve3([
+    new THREE.Vector3(0, 0.5, 0.45),
+    new THREE.Vector3(0, 0.7, 0.7),
+    new THREE.Vector3(0.15, 1.0, 0.85),
+    new THREE.Vector3(0.1, 1.15, 0.75),
+  ]);
+  const tailGeo = new THREE.TubeGeometry(tailCurve, 12, 0.06, 6, false);
+  const tailMat = new THREE.MeshLambertMaterial({ color: bodyColor });
+  const tail = new THREE.Mesh(tailGeo, tailMat);
+  catGroup.add(tail);
 
-  // Easter bunny ears on head (little headband)
-  ctx.strokeStyle = '#FF69B4';
-  ctx.lineWidth = s * 0.04;
-  ctx.beginPath();
-  ctx.arc(0, -s * 0.5, s * 0.22, Math.PI * 0.85, Math.PI * 0.15, true);
-  ctx.stroke();
+  // Bunny ear headband (Easter!)
+  const bandGeo = new THREE.TorusGeometry(0.18, 0.02, 8, 16, Math.PI);
+  const bandMat = new THREE.MeshLambertMaterial({ color: 0xFF69B4 });
+  const band = new THREE.Mesh(bandGeo, bandMat);
+  band.position.set(0, 1.02, -0.38);
+  band.rotation.x = -0.3;
+  catGroup.add(band);
 
-  // Tiny bunny ears on headband
-  for (const side of [-0.7, 0.7]) {
-    const ex = side * s * 0.15;
-    const ey = -s * 0.56;
-    ctx.beginPath();
-    ctx.ellipse(ex, ey - s * 0.12, s * 0.05, s * 0.13, side * 0.2, 0, Math.PI * 2);
-    ctx.fillStyle = '#FF69B4';
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(ex, ey - s * 0.11, s * 0.03, s * 0.09, side * 0.2, 0, Math.PI * 2);
-    ctx.fillStyle = '#FFB6C1';
-    ctx.fill();
-  }
+  // Bunny ears on headband (cylinder + sphere tip, compatible with r128)
+  const bunnyEarGeo = new THREE.CylinderGeometry(0.035, 0.045, 0.22, 8);
+  const bunnyEarMat = new THREE.MeshLambertMaterial({ color: 0xFF69B4 });
+  const bunnyTipGeo = new THREE.SphereGeometry(0.04, 6, 6);
+  const bunnyInnerGeo = new THREE.CylinderGeometry(0.02, 0.03, 0.16, 8);
+  const bunnyInnerMat = new THREE.MeshLambertMaterial({ color: pinkColor });
+  [-1, 1].forEach(side => {
+    const ear = new THREE.Mesh(bunnyEarGeo, bunnyEarMat);
+    ear.position.set(side * 0.13, 1.2, -0.38);
+    ear.rotation.z = side * 0.15;
+    catGroup.add(ear);
+    const tip = new THREE.Mesh(bunnyTipGeo, bunnyEarMat);
+    tip.position.set(side * 0.13, 1.32, -0.38);
+    catGroup.add(tip);
+    const inner = new THREE.Mesh(bunnyInnerGeo, bunnyInnerMat);
+    inner.position.set(side * 0.13, 1.2, -0.37);
+    inner.rotation.z = side * 0.15;
+    catGroup.add(inner);
+  });
 
-  // Basket on back
-  const basketY = s * 0.05;
-  ctx.fillStyle = '#D2691E';
-  ctx.beginPath();
-  ctx.moveTo(-s * 0.2, basketY);
-  ctx.lineTo(-s * 0.25, basketY + s * 0.2);
-  ctx.lineTo(s * 0.25, basketY + s * 0.2);
-  ctx.lineTo(s * 0.2, basketY);
-  ctx.closePath();
-  ctx.fill();
-  // Weave lines
-  ctx.strokeStyle = '#8B4513';
-  ctx.lineWidth = 1 * scale;
-  for (let i = 0; i < 3; i++) {
-    const ly = basketY + s * 0.05 + i * s * 0.05;
-    ctx.beginPath();
-    ctx.moveTo(-s * 0.23, ly);
-    ctx.lineTo(s * 0.23, ly);
-    ctx.stroke();
-  }
-  // Handle
-  ctx.beginPath();
-  ctx.arc(0, basketY - s * 0.05, s * 0.18, Math.PI * 1.15, Math.PI * 1.85, true);
-  ctx.strokeStyle = '#D2691E';
-  ctx.lineWidth = s * 0.04;
-  ctx.stroke();
+  // Legs (little stumps)
+  const legGeo = new THREE.CylinderGeometry(0.08, 0.07, 0.2, 8);
+  const legMat = new THREE.MeshLambertMaterial({ color: bodyColor });
+  [[-0.15, 0.1, -0.25], [0.15, 0.1, -0.25], [-0.15, 0.1, 0.25], [0.15, 0.1, 0.25]].forEach(pos => {
+    const leg = new THREE.Mesh(legGeo, legMat);
+    leg.position.set(...pos);
+    catGroup.add(leg);
+  });
 
-  // Mini eggs in basket
-  const miniEggs = Math.min(eggsCollected, 5);
-  for (let i = 0; i < miniEggs; i++) {
-    const ex = -s * 0.12 + i * s * 0.06;
-    const ey = basketY + s * 0.08;
-    ctx.beginPath();
-    ctx.ellipse(ex, ey, s * 0.035, s * 0.045, 0, 0, Math.PI * 2);
-    ctx.fillStyle = CONFIG.eggColors[i % CONFIG.eggColors.length];
-    ctx.fill();
-  }
-
-  ctx.restore();
+  catGroup.position.set(0, 0, 0);
+  scene.add(catGroup);
+  return catGroup;
 }
 
-function drawObstacle(x, y, size, type) {
-  ctx.save();
-  ctx.translate(x, y);
-  const s = size * scale;
+// ─── EASTER EGG MODEL ───
+function createEgg(color) {
+  const group = new THREE.Group();
 
-  // Shadow
-  ctx.beginPath();
-  ctx.ellipse(0, s * 0.4, s * 0.4, s * 0.1, 0, 0, Math.PI * 2);
-  ctx.fillStyle = 'rgba(0,0,0,0.15)';
-  ctx.fill();
+  // Egg shape: sphere scaled to be egg-like
+  const eggGeo = new THREE.SphereGeometry(0.35, 16, 16);
+  eggGeo.scale(0.8, 1.0, 0.8);
+  const eggMat = new THREE.MeshLambertMaterial({ color });
+  const egg = new THREE.Mesh(eggGeo, eggMat);
+  egg.position.y = 0.6;
+  group.add(egg);
 
-  if (type === 'bush') {
-    // Thorny bush
-    ctx.fillStyle = '#2D5016';
-    for (let i = 0; i < 5; i++) {
-      const a = (i / 5) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.arc(Math.cos(a) * s * 0.15, Math.sin(a) * s * 0.1 - s * 0.05, s * 0.22, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.fillStyle = '#3D7020';
-    ctx.beginPath();
-    ctx.arc(0, -s * 0.05, s * 0.2, 0, Math.PI * 2);
-    ctx.fill();
-    // Thorns
-    ctx.strokeStyle = '#1a3a08';
-    ctx.lineWidth = 2 * scale;
-    for (let i = 0; i < 6; i++) {
-      const a = (i / 6) * Math.PI * 2;
-      ctx.beginPath();
-      ctx.moveTo(Math.cos(a) * s * 0.2, Math.sin(a) * s * 0.15 - s * 0.05);
-      ctx.lineTo(Math.cos(a) * s * 0.35, Math.sin(a) * s * 0.25 - s * 0.05);
-      ctx.stroke();
-    }
-  } else {
-    // Mud puddle
-    ctx.beginPath();
-    ctx.ellipse(0, s * 0.1, s * 0.4, s * 0.2, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#8B6914';
-    ctx.fill();
-    ctx.beginPath();
-    ctx.ellipse(0, s * 0.08, s * 0.35, s * 0.16, 0, 0, Math.PI * 2);
-    ctx.fillStyle = '#9B7424';
-    ctx.fill();
-    // Bubbles
-    for (let i = 0; i < 3; i++) {
-      ctx.beginPath();
-      ctx.arc(-s * 0.1 + i * s * 0.1, s * 0.05 + Math.sin(Date.now() * 0.003 + i) * s * 0.02, s * 0.04, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(200,150,50,0.5)';
-      ctx.fill();
-    }
+  // Decorative band
+  const bandGeo = new THREE.TorusGeometry(0.28, 0.03, 6, 16);
+  const bandMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.5 });
+  const band = new THREE.Mesh(bandGeo, bandMat);
+  band.position.y = 0.6;
+  band.rotation.x = Math.PI / 2;
+  group.add(band);
+
+  // Small dots
+  const dotGeo = new THREE.SphereGeometry(0.04, 6, 6);
+  const dotMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.6 });
+  for (let i = 0; i < 4; i++) {
+    const angle = (i / 4) * Math.PI * 2;
+    const dot = new THREE.Mesh(dotGeo, dotMat);
+    dot.position.set(Math.cos(angle) * 0.22, 0.6 + Math.sin(angle * 2) * 0.1, Math.sin(angle) * 0.22);
+    group.add(dot);
   }
 
-  ctx.restore();
+  return group;
 }
 
-function drawFlower(x, y, size, color) {
-  ctx.save();
-  ctx.translate(x, y);
-  const s = size;
+// ─── OBSTACLE: THORNY BUSH ───
+function createBush() {
+  const group = new THREE.Group();
+  const bushColor = 0x2D6B16;
+  const darkGreen = 0x1B4D0E;
+
+  // Main bush body - several spheres
+  const positions = [
+    [0, 0.35, 0, 0.35],
+    [-0.2, 0.25, 0.1, 0.22],
+    [0.2, 0.28, -0.1, 0.25],
+    [0, 0.5, 0, 0.2],
+  ];
+  positions.forEach(([x, y, z, r]) => {
+    const geo = new THREE.SphereGeometry(r, 10, 8);
+    const mat = new THREE.MeshLambertMaterial({ color: bushColor });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, y, z);
+    group.add(mesh);
+  });
+
+  // Thorns
+  const thornGeo = new THREE.ConeGeometry(0.03, 0.15, 4);
+  const thornMat = new THREE.MeshLambertMaterial({ color: darkGreen });
+  for (let i = 0; i < 8; i++) {
+    const angle = (i / 8) * Math.PI * 2;
+    const thorn = new THREE.Mesh(thornGeo, thornMat);
+    thorn.position.set(Math.cos(angle) * 0.35, 0.35, Math.sin(angle) * 0.35);
+    thorn.rotation.z = Math.cos(angle) * 0.8;
+    thorn.rotation.x = Math.sin(angle) * 0.8;
+    group.add(thorn);
+  }
+
+  return group;
+}
+
+// ─── GROUND TILE ───
+function createGroundTile(z) {
+  const group = new THREE.Group();
+
+  // Grass ground (wide)
+  const grassGeo = new THREE.BoxGeometry(30, 0.3, 3);
+  const grassMat = new THREE.MeshLambertMaterial({ color: CONFIG.GRASS_GREEN });
+  const grass = new THREE.Mesh(grassGeo, grassMat);
+  grass.position.y = -0.15;
+  group.add(grass);
+
+  // Path (dirt track)
+  const pathGeo = new THREE.BoxGeometry(6.5, 0.32, 3);
+  const pathMat = new THREE.MeshLambertMaterial({ color: CONFIG.PATH_COLOR });
+  const path = new THREE.Mesh(pathGeo, pathMat);
+  path.position.y = -0.14;
+  group.add(path);
+
+  // Lane dividers
+  const divGeo = new THREE.BoxGeometry(0.06, 0.01, 1.5);
+  const divMat = new THREE.MeshLambertMaterial({ color: 0xFFFFFF, transparent: true, opacity: 0.2 });
+  [-1, 1].forEach(side => {
+    const div = new THREE.Mesh(divGeo, divMat);
+    div.position.set(side, 0.02, 0);
+    group.add(div);
+  });
+
+  group.position.z = z;
+  scene.add(group);
+  return { mesh: group, z };
+}
+
+// ─── FLOWERS & DECORATION ───
+function createFlower(x, z) {
+  const group = new THREE.Group();
+  const color = CONFIG.FLOWER_COLORS[Math.floor(Math.random() * CONFIG.FLOWER_COLORS.length)];
+
+  // Stem
+  const stemGeo = new THREE.CylinderGeometry(0.02, 0.02, 0.3, 4);
+  const stemMat = new THREE.MeshLambertMaterial({ color: 0x4CAF50 });
+  const stem = new THREE.Mesh(stemGeo, stemMat);
+  stem.position.y = 0.15;
+  group.add(stem);
+
   // Petals
+  const petalGeo = new THREE.SphereGeometry(0.06, 6, 6);
+  const petalMat = new THREE.MeshLambertMaterial({ color });
   for (let i = 0; i < 5; i++) {
-    const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
-    ctx.beginPath();
-    ctx.ellipse(Math.cos(a) * s * 0.3, Math.sin(a) * s * 0.3, s * 0.25, s * 0.15, a, 0, Math.PI * 2);
-    ctx.fillStyle = color;
-    ctx.fill();
+    const angle = (i / 5) * Math.PI * 2;
+    const petal = new THREE.Mesh(petalGeo, petalMat);
+    petal.position.set(Math.cos(angle) * 0.08, 0.32, Math.sin(angle) * 0.08);
+    group.add(petal);
   }
+
   // Center
-  ctx.beginPath();
-  ctx.arc(0, 0, s * 0.15, 0, Math.PI * 2);
-  ctx.fillStyle = '#FFD700';
-  ctx.fill();
-  ctx.restore();
+  const centerGeo = new THREE.SphereGeometry(0.04, 6, 6);
+  const centerMat = new THREE.MeshLambertMaterial({ color: 0xFFD700 });
+  const center = new THREE.Mesh(centerGeo, centerMat);
+  center.position.y = 0.32;
+  group.add(center);
+
+  group.position.set(x, 0, z);
+  group.scale.setScalar(0.6 + Math.random() * 0.8);
+  scene.add(group);
+  return { mesh: group, z };
 }
 
-function drawCloud(x, y, size) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.fillStyle = 'rgba(255,255,255,0.8)';
-  ctx.beginPath();
-  ctx.arc(0, 0, size, 0, Math.PI * 2);
-  ctx.arc(-size * 0.7, size * 0.1, size * 0.7, 0, Math.PI * 2);
-  ctx.arc(size * 0.7, size * 0.1, size * 0.7, 0, Math.PI * 2);
-  ctx.arc(-size * 0.3, -size * 0.5, size * 0.6, 0, Math.PI * 2);
-  ctx.arc(size * 0.3, -size * 0.4, size * 0.5, 0, Math.PI * 2);
-  ctx.fill();
-  ctx.restore();
+// ─── TAIL SEGMENT (collected eggs behind cat) ───
+function createTailEgg(color) {
+  const geo = new THREE.SphereGeometry(0.2, 10, 10);
+  geo.scale(0.8, 1.0, 0.8);
+  const mat = new THREE.MeshLambertMaterial({ color });
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = 0.3;
+  scene.add(mesh);
+  return mesh;
 }
 
-// ─── WORLD GENERATION ───
-function generateWorld() {
-  grassTufts = [];
-  bgFlowers = [];
-  clouds = [];
-  for (let i = 0; i < 80; i++) {
-    grassTufts.push({
-      x: Math.random() * W,
-      y: H * 0.45 + Math.random() * H * 0.55,
-      size: (3 + Math.random() * 6) * scale,
-      shade: Math.random() * 0.3,
-    });
-  }
-  for (let i = 0; i < 25; i++) {
-    bgFlowers.push({
-      x: Math.random() * W,
-      y: H * 0.5 + Math.random() * H * 0.35,
-      size: (4 + Math.random() * 8) * scale,
-      color: CONFIG.flowerColors[Math.floor(Math.random() * CONFIG.flowerColors.length)],
-    });
-  }
-  for (let i = 0; i < 5; i++) {
-    clouds.push({
-      x: Math.random() * W,
-      y: H * 0.05 + Math.random() * H * 0.2,
-      size: (20 + Math.random() * 30) * scale,
-      speed: (0.2 + Math.random() * 0.3) * scale,
+// ─── PARTICLE ───
+function spawnParticles(x, y, z, color, count) {
+  for (let i = 0; i < count; i++) {
+    const geo = new THREE.SphereGeometry(0.06, 4, 4);
+    const mat = new THREE.MeshBasicMaterial({ color });
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.set(x, y, z);
+    scene.add(mesh);
+    particles.push({
+      mesh,
+      vx: (Math.random() - 0.5) * 0.15,
+      vy: 0.08 + Math.random() * 0.1,
+      vz: (Math.random() - 0.5) * 0.15,
+      life: 1.0,
     });
   }
 }
 
-// ─── SPAWNING ───
-let spawnTimer = 0;
+// ─── LEVEL GENERATION ───
+function generateLevel() {
+  levelLength = CONFIG.levelLength(currentLevel);
+  const easyEnd = levelLength * CONFIG.DIFFICULTY.easyPct;
+  const medEnd = levelLength * CONFIG.DIFFICULTY.medPct;
 
-function spawnEntities(dt) {
-  spawnTimer -= dt;
-  if (spawnTimer > 0) return;
+  levelRows = [];
+  for (let z = -10; z > -levelLength; z -= CONFIG.ROW_SPACING) {
+    let difficulty;
+    const dist = Math.abs(z);
+    if (dist < easyEnd) difficulty = 'easy';
+    else if (dist < medEnd) difficulty = 'medium';
+    else difficulty = 'hard';
 
-  const interval = CONFIG.spawnInterval / (1 + (currentLevel - 1) * 0.08);
-  spawnTimer = interval + Math.random() * interval * 0.5;
+    const patterns = CONFIG.PATTERNS[difficulty];
+    const pattern = patterns[Math.floor(Math.random() * patterns.length)];
 
-  // Pick lanes
-  const occupiedLanes = [];
-  const eggChance = 0.65;
-  const obstacleChance = 0.15 + currentLevel * 0.02;
+    levelRows.push({ z, pattern, spawned: false });
+  }
+}
+
+function spawnRow(row) {
+  if (row.spawned) return;
+  row.spawned = true;
 
   for (let lane = 0; lane < 3; lane++) {
-    const r = Math.random();
-    if (r < eggChance && occupiedLanes.length < 2) {
-      entities.push({
-        type: 'egg',
-        lane: lane,
-        x: W / 2 + CONFIG.lanes[lane] * 80 * scale,
-        y: -40 * scale,
-        size: CONFIG.eggSize,
-        color: CONFIG.eggColors[Math.floor(Math.random() * CONFIG.eggColors.length)],
-        pattern: CONFIG.eggPatterns[Math.floor(Math.random() * CONFIG.eggPatterns.length)],
-        rotation: Math.random() * 0.4 - 0.2,
-        bobPhase: Math.random() * Math.PI * 2,
-      });
-      occupiedLanes.push(lane);
-    } else if (r < eggChance + obstacleChance && occupiedLanes.length < 2) {
-      entities.push({
-        type: 'obstacle',
-        lane: lane,
-        x: W / 2 + CONFIG.lanes[lane] * 80 * scale,
-        y: -40 * scale,
-        size: CONFIG.obstacleSize,
-        variant: Math.random() > 0.5 ? 'bush' : 'mud',
-      });
-      occupiedLanes.push(lane);
+    const ch = row.pattern[lane];
+    const x = CONFIG.LANES[lane];
+
+    if (ch === 'E') {
+      const color = CONFIG.EGG_COLORS[Math.floor(Math.random() * CONFIG.EGG_COLORS.length)];
+      const mesh = createEgg(color);
+      mesh.position.set(x, 0, row.z);
+      scene.add(mesh);
+      eggs.push({ mesh, z: row.z, lane, color, collected: false });
+    } else if (ch === 'O') {
+      const mesh = createBush();
+      mesh.position.set(x, 0, row.z);
+      scene.add(mesh);
+      obstacles.push({ mesh, z: row.z, lane });
     }
   }
 }
 
-// ─── PARTICLES ───
-function spawnCollectParticles(x, y, color) {
-  for (let i = 0; i < 12; i++) {
-    const a = (i / 12) * Math.PI * 2;
-    const speed = (2 + Math.random() * 3) * scale;
-    particles.push({
-      x, y,
-      vx: Math.cos(a) * speed,
-      vy: Math.sin(a) * speed - 2 * scale,
-      size: (3 + Math.random() * 4) * scale,
-      color: color,
-      life: 1,
-      decay: 1.5 + Math.random() * 0.5,
-      type: 'sparkle',
-    });
+// ─── GROUND MANAGEMENT ───
+function spawnInitialGround() {
+  for (let z = 10; z > -80; z -= 3) {
+    groundTiles.push(createGroundTile(z));
+    // Flowers on the sides
+    if (Math.random() < 0.6) {
+      const side = Math.random() > 0.5 ? 1 : -1;
+      const fx = side * (4 + Math.random() * 6);
+      flowers.push(createFlower(fx, z + Math.random() * 3));
+    }
   }
 }
 
-function spawnStunParticles(x, y) {
-  for (let i = 0; i < 8; i++) {
-    particles.push({
-      x: x + (Math.random() - 0.5) * 40 * scale,
-      y: y + (Math.random() - 0.5) * 40 * scale,
-      vx: (Math.random() - 0.5) * 2 * scale,
-      vy: -2 * scale * Math.random(),
-      size: (8 + Math.random() * 6) * scale,
-      color: '#FFD700',
-      life: 1,
-      decay: 2,
-      type: 'star',
-    });
-  }
-}
+function updateGround() {
+  const catZ = catGroup.position.z;
 
-function spawnPetals() {
-  if (petals.length < 15 && Math.random() < 0.03) {
-    petals.push({
-      x: Math.random() * W,
-      y: -10,
-      vx: (Math.random() - 0.5) * 0.5 * scale,
-      vy: (0.5 + Math.random() * 0.8) * scale,
-      size: (4 + Math.random() * 4) * scale,
-      rotation: Math.random() * Math.PI * 2,
-      rotSpeed: (Math.random() - 0.5) * 0.05,
-      color: CONFIG.flowerColors[Math.floor(Math.random() * CONFIG.flowerColors.length)],
-      wobblePhase: Math.random() * Math.PI * 2,
-    });
+  // Spawn ground ahead
+  const lastZ = groundTiles.length > 0 ? groundTiles[groundTiles.length - 1].z : 10;
+  if (lastZ > catZ - 80) {
+    const newZ = lastZ - 3;
+    groundTiles.push(createGroundTile(newZ));
+    if (Math.random() < 0.6) {
+      const side = Math.random() > 0.5 ? 1 : -1;
+      flowers.push(createFlower(side * (4 + Math.random() * 6), newZ + Math.random() * 3));
+    }
+  }
+
+  // Remove behind
+  while (groundTiles.length > 0 && groundTiles[0].z > catZ + CONFIG.DESPAWN_BEHIND) {
+    scene.remove(groundTiles[0].mesh);
+    groundTiles.shift();
+  }
+  while (flowers.length > 0 && flowers[0].z > catZ + CONFIG.DESPAWN_BEHIND) {
+    scene.remove(flowers[0].mesh);
+    flowers.shift();
   }
 }
 
@@ -824,265 +659,201 @@ function spawnPetals() {
 function update(dt) {
   if (gameState !== 'playing') return;
 
-  const currentSpeed = CONFIG.levelSpeed(currentLevel);
-  scrollOffset += currentSpeed * scale * dt;
+  const now = performance.now();
+  const speed = CONFIG.levelSpeed(currentLevel);
 
-  // Cat movement
-  const catMoveSpeed = 12 * scale;
-  const dx = catTargetX - catX;
-  if (Math.abs(dx) > 1) {
-    catX += dx * catMoveSpeed * dt;
+  // Forward movement (always moves, even when stunned)
+  forwardZ -= speed * dt * 60;
+  catGroup.position.z = forwardZ;
+
+  // Stun recovery
+  if (isStunned && now > stunEnd) {
+    isStunned = false;
+    catGroup.children.forEach(c => {
+      if (c.material) c.material.opacity = 1;
+    });
+  }
+
+  // Stun flash
+  if (isStunned) {
+    const flash = Math.sin(now * 0.015) > 0;
+    catGroup.visible = flash;
   } else {
-    catX = catTargetX;
+    catGroup.visible = true;
   }
 
-  catBobTimer += dt * 8;
-  if (catStunTimer > 0) catStunTimer -= dt;
-  if (inputCooldown > 0) inputCooldown -= dt;
-  if (comboTimer > 0) {
-    comboTimer -= dt;
-    if (comboTimer <= 0) comboCount = 0;
+  // Lane transition
+  if (isTransitioning) {
+    const elapsed = now - transStart;
+    const t = Math.min(elapsed / CONFIG.LANE_SWITCH_MS, 1);
+    const eased = t < 0.5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+    catX = transFromX + (transToX - transFromX) * eased;
+    if (t >= 1) {
+      catX = transToX;
+      isTransitioning = false;
+    }
   }
+  catGroup.position.x = catX;
 
-  // Spawn
-  spawnEntities(dt);
-  spawnPetals();
+  // Bob animation
+  const bob = Math.sin(now * 0.008) * 0.08;
+  catGroup.position.y = bob;
 
-  // Move entities
-  for (const e of entities) {
-    e.y += currentSpeed * scale * dt * 60;
-    if (e.type === 'egg') {
-      e.bobPhase += dt * 3;
-      e.drawX = e.x + Math.sin(e.bobPhase) * 3 * scale;
-      e.drawY = e.y + Math.cos(e.bobPhase) * 2 * scale;
+  // Cat slight tilt when moving
+  const targetTilt = isTransitioning ? (transToX - transFromX) * -0.15 : 0;
+  catGroup.rotation.z += (targetTilt - catGroup.rotation.z) * 0.1;
+
+  // Spawn rows
+  for (const row of levelRows) {
+    if (!row.spawned && row.z > forwardZ - CONFIG.SPAWN_AHEAD && row.z < forwardZ + 5) {
+      spawnRow(row);
     }
   }
 
-  // Collision detection
-  const catHitRadius = CONFIG.catSize * scale * 0.35;
-  const catCenterY = catY + Math.sin(catBobTimer) * 3 * scale;
+  // Animate eggs (hover + spin)
+  for (const egg of eggs) {
+    if (!egg.collected) {
+      egg.mesh.position.y = 0.1 + Math.sin(now * 0.003 + egg.z) * 0.15;
+      egg.mesh.rotation.y += 0.02;
+    }
+  }
 
-  for (let i = entities.length - 1; i >= 0; i--) {
-    const e = entities[i];
-    const ex = e.type === 'egg' ? e.drawX : e.x;
-    const ey = e.type === 'egg' ? e.drawY : e.y;
-    const dist = Math.hypot(ex - catX, ey - catCenterY);
-    const hitDist = catHitRadius + e.size * scale * 0.4;
+  // Collision: eggs
+  for (let i = eggs.length - 1; i >= 0; i--) {
+    const egg = eggs[i];
+    if (egg.collected) continue;
+    const dz = Math.abs(egg.mesh.position.z - catGroup.position.z);
+    const dx = Math.abs(egg.mesh.position.x - catX);
+    if (dz < CONFIG.COLLISION_Z && dx < 1.2) {
+      egg.collected = true;
+      eggsCollected++;
+      comboCount++;
+      comboTimer = 1.5;
+      score += 10 * (1 + Math.floor(comboCount / 3) * 0.5);
 
-    if (dist < hitDist) {
-      if (e.type === 'egg') {
-        // Collect!
-        eggsCollected++;
-        score += 10 * (1 + comboCount * 0.5);
-        comboCount++;
-        comboTimer = 1.5;
-        spawnCollectParticles(ex, ey, e.color);
-        flashTimer = 0.1;
-        flashColor = e.color;
-        entities.splice(i, 1);
-        updateUI();
+      // Particles
+      spawnParticles(egg.mesh.position.x, egg.mesh.position.y, egg.mesh.position.z, egg.color, 8);
 
-        if (eggsCollected >= eggsNeeded) {
-          levelComplete();
-        }
-      } else if (e.type === 'obstacle' && catStunTimer <= 0) {
-        // Hit!
-        catStunTimer = 1.0;
-        screenShake = 0.3;
-        spawnStunParticles(catX, catCenterY);
-        eggsCollected = Math.max(0, eggsCollected - 2);
-        entities.splice(i, 1);
-        updateUI();
+      // Add tail segment
+      const tailMesh = createTailEgg(egg.color);
+      tailSegments.push({ mesh: tailMesh, targetX: catX, targetZ: forwardZ });
+
+      // Remove egg
+      scene.remove(egg.mesh);
+      eggs.splice(i, 1);
+      updateUI();
+
+      // Show combo
+      if (comboCount >= 3) showCombo(comboCount);
+
+      if (eggsCollected >= eggsNeeded) {
+        levelComplete();
+        return;
       }
     }
+  }
 
-    // Remove off-screen
-    if (e.y > H + 60 * scale) {
-      entities.splice(i, 1);
+  // Collision: obstacles
+  if (!isStunned) {
+    for (let i = obstacles.length - 1; i >= 0; i--) {
+      const obs = obstacles[i];
+      const dz = Math.abs(obs.mesh.position.z - catGroup.position.z);
+      const dx = Math.abs(obs.mesh.position.x - catX);
+      if (dz < CONFIG.COLLISION_Z && dx < 1.0) {
+        isStunned = true;
+        stunEnd = now + CONFIG.STUN_MS;
+        eggsCollected = Math.max(0, eggsCollected - 2);
+        spawnParticles(obs.mesh.position.x, 0.5, obs.mesh.position.z, 0xFFD700, 6);
+
+        // Remove the obstacle so we don't re-collide
+        scene.remove(obs.mesh);
+        obstacles.splice(i, 1);
+
+        // Remove some tail segments
+        for (let t = 0; t < 2 && tailSegments.length > 0; t++) {
+          const seg = tailSegments.pop();
+          scene.remove(seg.mesh);
+        }
+
+        updateUI();
+        break;
+      }
     }
+  }
+
+  // Cleanup despawned
+  for (let i = eggs.length - 1; i >= 0; i--) {
+    if (eggs[i].mesh.position.z > forwardZ + CONFIG.DESPAWN_BEHIND) {
+      scene.remove(eggs[i].mesh);
+      eggs.splice(i, 1);
+    }
+  }
+  for (let i = obstacles.length - 1; i >= 0; i--) {
+    if (obstacles[i].mesh.position.z > forwardZ + CONFIG.DESPAWN_BEHIND) {
+      scene.remove(obstacles[i].mesh);
+      obstacles.splice(i, 1);
+    }
+  }
+
+  // Update tail (follow behind cat)
+  for (let i = 0; i < tailSegments.length; i++) {
+    const seg = tailSegments[i];
+    const followZ = forwardZ + 1.2 + i * 0.55;
+    const followX = catX;
+    seg.mesh.position.x += (followX - seg.mesh.position.x) * 0.08;
+    seg.mesh.position.z += (followZ - seg.mesh.position.z) * 0.1;
+    seg.mesh.position.y = 0.25 + Math.sin(now * 0.005 + i * 0.8) * 0.05;
+    seg.mesh.rotation.y += 0.02;
   }
 
   // Particles
   for (let i = particles.length - 1; i >= 0; i--) {
     const p = particles[i];
-    p.x += p.vx;
-    p.y += p.vy;
-    p.vy += 0.1 * scale;
-    p.life -= p.decay * dt;
-    if (p.life <= 0) particles.splice(i, 1);
-  }
-
-  // Petals
-  for (let i = petals.length - 1; i >= 0; i--) {
-    const p = petals[i];
-    p.wobblePhase += dt * 2;
-    p.x += p.vx + Math.sin(p.wobblePhase) * 0.3 * scale;
-    p.y += p.vy;
-    p.rotation += p.rotSpeed;
-    if (p.y > H + 20) petals.splice(i, 1);
-  }
-
-  // Clouds
-  for (const c of clouds) {
-    c.x += c.speed * dt * 20;
-    if (c.x > W + c.size * 2) c.x = -c.size * 2;
-  }
-
-  // Screen shake
-  if (screenShake > 0) screenShake -= dt * 2;
-
-  // Move background flowers and grass with scroll
-  for (const f of bgFlowers) {
-    f.y += currentSpeed * scale * dt * 15;
-    if (f.y > H + 20) {
-      f.y = H * 0.45 - 20;
-      f.x = Math.random() * W;
-      f.color = CONFIG.flowerColors[Math.floor(Math.random() * CONFIG.flowerColors.length)];
+    p.mesh.position.x += p.vx;
+    p.mesh.position.y += p.vy;
+    p.mesh.position.z += p.vz;
+    p.vy -= 0.004;
+    p.life -= dt * 2;
+    p.mesh.material.opacity = Math.max(0, p.life);
+    p.mesh.material.transparent = true;
+    if (p.life <= 0) {
+      scene.remove(p.mesh);
+      particles.splice(i, 1);
     }
   }
-  for (const g of grassTufts) {
-    g.y += currentSpeed * scale * dt * 15;
-    if (g.y > H + 20) {
-      g.y = H * 0.4 - 20;
-      g.x = Math.random() * W;
-    }
+
+  // Combo timer
+  if (comboTimer > 0) {
+    comboTimer -= dt;
+    if (comboTimer <= 0) comboCount = 0;
+  }
+
+  // Ground
+  updateGround();
+
+  // Camera follow
+  camera.position.z += (forwardZ + CONFIG.CAMERA.offsetZ - camera.position.z) * 0.1;
+  camera.position.x += (catX * 0.3 - camera.position.x) * 0.05;
+  camera.lookAt(catX * 0.15, 1, forwardZ + CONFIG.CAMERA.lookAheadZ);
+
+  // Check if ran past end of level without enough eggs
+  if (Math.abs(forwardZ) > levelLength + 20 && eggsCollected < eggsNeeded) {
+    levelFail();
   }
 }
 
 // ─── RENDER ───
 function render() {
-  ctx.save();
+  renderer.render(scene, camera);
+}
 
-  // Screen shake
-  if (screenShake > 0) {
-    const shakeX = (Math.random() - 0.5) * screenShake * 20 * scale;
-    const shakeY = (Math.random() - 0.5) * screenShake * 20 * scale;
-    ctx.translate(shakeX, shakeY);
-  }
-
-  // Sky gradient
-  const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.5);
-  skyGrad.addColorStop(0, CONFIG.skyTop);
-  skyGrad.addColorStop(1, CONFIG.skyBottom);
-  ctx.fillStyle = skyGrad;
-  ctx.fillRect(0, 0, W, H);
-
-  // Clouds
-  for (const c of clouds) {
-    drawCloud(c.x, c.y, c.size);
-  }
-
-  // Ground
-  const groundGrad = ctx.createLinearGradient(0, H * 0.42, 0, H);
-  groundGrad.addColorStop(0, '#8DD35F');
-  groundGrad.addColorStop(0.3, CONFIG.grassColor);
-  groundGrad.addColorStop(1, '#5DA03A');
-  ctx.fillStyle = groundGrad;
-  ctx.fillRect(0, H * 0.42, W, H * 0.58);
-
-  // Path/road
-  const pathWidth = CONFIG.laneWidth * 3 * 80 * scale;
-  const pathX = W / 2 - pathWidth / 2;
-  ctx.fillStyle = 'rgba(194,178,128,0.35)';
-  ctx.beginPath();
-  ctx.moveTo(pathX, H * 0.42);
-  ctx.lineTo(pathX + pathWidth, H * 0.42);
-  ctx.lineTo(pathX + pathWidth, H);
-  ctx.lineTo(pathX, H);
-  ctx.closePath();
-  ctx.fill();
-
-  // Lane dividers (subtle)
-  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-  ctx.lineWidth = 2 * scale;
-  ctx.setLineDash([10 * scale, 15 * scale]);
-  for (let i = 0; i < 2; i++) {
-    const lx = W / 2 + (CONFIG.lanes[i] + CONFIG.lanes[i + 1]) / 2 * 80 * scale;
-    ctx.beginPath();
-    ctx.moveTo(lx, H * 0.42);
-    ctx.lineTo(lx, H);
-    ctx.stroke();
-  }
-  ctx.setLineDash([]);
-
-  // Grass tufts
-  for (const g of grassTufts) {
-    ctx.fillStyle = `rgba(100, 180, 60, ${0.3 + g.shade * 0.3})`;
-    ctx.beginPath();
-    ctx.moveTo(g.x - g.size, g.y);
-    ctx.quadraticCurveTo(g.x - g.size * 0.3, g.y - g.size * 2, g.x, g.y);
-    ctx.quadraticCurveTo(g.x + g.size * 0.3, g.y - g.size * 1.8, g.x + g.size, g.y);
-    ctx.fill();
-  }
-
-  // Background flowers
-  for (const f of bgFlowers) {
-    drawFlower(f.x, f.y, f.size, f.color);
-  }
-
-  // Entities (sorted by y for depth)
-  const sortedEntities = [...entities].sort((a, b) => a.y - b.y);
-  for (const e of sortedEntities) {
-    if (e.type === 'egg') {
-      drawEgg(e.drawX, e.drawY, e.size * scale, e.color, e.pattern, e.rotation);
-    } else {
-      drawObstacle(e.x, e.y, e.size, e.variant);
-    }
-  }
-
-  // Cat
-  const bobOffset = Math.sin(catBobTimer) * 3 * scale;
-  drawCat(catX, catY, catStunTimer > 0, bobOffset);
-
-  // Particles
-  for (const p of particles) {
-    ctx.globalAlpha = p.life;
-    if (p.type === 'star') {
-      ctx.fillStyle = p.color;
-      drawStar(p.x, p.y, p.size, 5);
-      ctx.fill();
-    } else {
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  // Petals
-  for (const p of petals) {
-    ctx.save();
-    ctx.translate(p.x, p.y);
-    ctx.rotate(p.rotation);
-    ctx.globalAlpha = 0.6;
-    ctx.fillStyle = p.color;
-    ctx.beginPath();
-    ctx.ellipse(0, 0, p.size, p.size * 0.5, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  // Flash effect
-  if (flashTimer > 0) {
-    ctx.globalAlpha = flashTimer * 3;
-    ctx.fillStyle = flashColor;
-    ctx.fillRect(0, 0, W, H);
-    ctx.globalAlpha = 1;
-    flashTimer -= 1 / 60;
-  }
-
-  // Easter egg border decorations
-  const borderEggSize = 12 * scale;
-  const time = Date.now() * 0.001;
-  ctx.globalAlpha = 0.15;
-  for (let i = 0; i < 8; i++) {
-    const ex = (i / 8) * W + Math.sin(time + i) * 10 * scale;
-    drawEgg(ex, 10 * scale, borderEggSize, CONFIG.eggColors[i % CONFIG.eggColors.length], 'plain', Math.sin(time + i) * 0.2);
-  }
-  ctx.globalAlpha = 1;
-
-  ctx.restore();
+// ─── GAME LOOP ───
+function gameLoop(timestamp) {
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+  update(dt);
+  render();
+  requestAnimationFrame(gameLoop);
 }
 
 // ─── UI ───
@@ -1098,6 +869,13 @@ function showUI(show) {
   document.getElementById('progress-bar').classList.toggle('active', show);
 }
 
+function showCombo(count) {
+  const el = document.getElementById('combo-display');
+  el.textContent = `${count}x Combo!`;
+  el.style.opacity = 1;
+  setTimeout(() => { el.style.opacity = 0; }, 800);
+}
+
 // ─── SCREENS ───
 const overlay = document.getElementById('screen-overlay');
 const content = document.getElementById('screen-content');
@@ -1106,10 +884,7 @@ function showScreen(html) {
   content.innerHTML = html;
   overlay.classList.remove('hidden');
 }
-
-function hideScreen() {
-  overlay.classList.add('hidden');
-}
+function hideScreen() { overlay.classList.add('hidden'); }
 
 function showTitleScreen() {
   gameState = 'title';
@@ -1117,11 +892,11 @@ function showTitleScreen() {
   showScreen(`
     <div class="screen-emoji">&#x1F430;&#x1F431;</div>
     <div class="screen-title">Easter Egg Cat</div>
-    <div class="screen-subtitle">Help kitty collect Easter eggs in the spring meadow! Fill your basket to complete each level.</div>
+    <div class="screen-subtitle">Help kitty collect Easter eggs on a spring meadow trail! Dodge thorny bushes and fill your basket.</div>
     <div class="controls-help">
       <div class="control-item"><span class="key-icon">&larr; &rarr;</span> Switch lanes</div>
       <div class="control-item"><span class="key-icon">A D</span> Switch lanes</div>
-      <div class="control-item"><span class="key-icon">Tap</span> Left / Right</div>
+      <div class="control-item"><span class="key-icon">Tap/Swipe</span> Left / Right</div>
     </div>
     <div>
       <button class="btn btn-primary" onclick="startGame()">Start Game</button>
@@ -1148,16 +923,15 @@ function showLevelIntro() {
 
 function levelComplete() {
   gameState = 'success';
-  totalEggsAllLevels += eggsCollected;
+  totalEggs += eggsCollected;
   showUI(false);
-
   if (currentLevel >= CONFIG.maxLevel) {
     showScreen(`
       <div class="screen-emoji">&#x1F3C6;</div>
       <div class="screen-title">You Win!</div>
       <div class="screen-subtitle">Amazing! You collected all the Easter eggs!</div>
       <div class="stats-grid">
-        <div class="stat-box"><div class="stat-val">${totalEggsAllLevels}</div><div class="stat-label">Total Eggs</div></div>
+        <div class="stat-box"><div class="stat-val">${totalEggs}</div><div class="stat-label">Total Eggs</div></div>
         <div class="stat-box"><div class="stat-val">${Math.floor(score)}</div><div class="stat-label">Score</div></div>
         <div class="stat-box"><div class="stat-val">${CONFIG.maxLevel}</div><div class="stat-label">Levels</div></div>
         <div class="stat-box"><div class="stat-val">&#x2B50;</div><div class="stat-label">Champion</div></div>
@@ -1169,7 +943,6 @@ function levelComplete() {
     `);
     return;
   }
-
   showScreen(`
     <div class="screen-emoji">&#x1F389;</div>
     <div class="screen-title">Level ${currentLevel} Complete!</div>
@@ -1185,18 +958,62 @@ function levelComplete() {
   `);
 }
 
+function levelFail() {
+  gameState = 'fail';
+  showUI(false);
+  showScreen(`
+    <div class="screen-emoji">&#x1F622;</div>
+    <div class="screen-title">Not Enough Eggs!</div>
+    <div class="screen-subtitle">You collected ${eggsCollected} of ${eggsNeeded} eggs needed.</div>
+    <div>
+      <button class="btn btn-primary" onclick="retryLevel()">Try Again</button>
+      <button class="btn btn-secondary" onclick="showTitleScreen()">Menu</button>
+    </div>
+  `);
+}
+
+// ─── GAME FLOW ───
+function clearWorld() {
+  eggs.forEach(e => scene.remove(e.mesh));
+  obstacles.forEach(o => scene.remove(o.mesh));
+  groundTiles.forEach(g => scene.remove(g.mesh));
+  flowers.forEach(f => scene.remove(f.mesh));
+  tailSegments.forEach(s => scene.remove(s.mesh));
+  particles.forEach(p => scene.remove(p.mesh));
+  eggs = []; obstacles = []; groundTiles = []; flowers = [];
+  tailSegments = []; particles = []; levelRows = [];
+}
+
+function resetLevel() {
+  clearWorld();
+  eggsCollected = 0;
+  eggsNeeded = CONFIG.levelEggs(currentLevel);
+  laneIndex = 1;
+  catX = 0; targetX = 0;
+  forwardZ = 0;
+  nextRowZ = -10;
+  isStunned = false;
+  isTransitioning = false;
+  comboCount = 0; comboTimer = 0;
+  catGroup.position.set(0, 0, 0);
+  catGroup.rotation.set(0, 0, 0);
+  catGroup.visible = true;
+  generateLevel();
+  spawnInitialGround();
+  updateUI();
+  camera.position.set(0, CONFIG.CAMERA.offsetY, CONFIG.CAMERA.offsetZ);
+}
+
 function startGame() {
   currentLevel = 1;
-  score = 0;
-  totalEggsAllLevels = 0;
+  score = 0; totalEggs = 0;
   resetLevel();
   showLevelIntro();
 }
 
 function resetAndStart() {
   currentLevel = 1;
-  score = 0;
-  totalEggsAllLevels = 0;
+  score = 0; totalEggs = 0;
   resetLevel();
   showLevelIntro();
 }
@@ -1207,61 +1024,38 @@ function nextLevel() {
   showLevelIntro();
 }
 
-function resetLevel() {
-  eggsCollected = 0;
-  eggsNeeded = CONFIG.levelEggs(currentLevel);
-  catLane = 1;
-  catStunTimer = 0;
-  entities = [];
-  particles = [];
-  spawnTimer = 0;
-  comboCount = 0;
-  comboTimer = 0;
-  screenShake = 0;
-  flashTimer = 0;
-  updateCatTarget();
-  catX = catTargetX;
-  updateUI();
-  generateWorld();
+function retryLevel() {
+  resetLevel();
+  showLevelIntro();
 }
 
-// Make functions accessible from onclick
 window.startGame = startGame;
 window.resetAndStart = resetAndStart;
 window.nextLevel = nextLevel;
+window.retryLevel = retryLevel;
 window.showTitleScreen = showTitleScreen;
 
 // ─── INPUT ───
-function moveLeft() {
-  if (catLane > 0 && inputCooldown <= 0) {
-    catLane--;
-    inputCooldown = 0.12;
-    updateCatTarget();
-  }
-}
-
-function moveRight() {
-  if (catLane < 2 && inputCooldown <= 0) {
-    catLane++;
-    inputCooldown = 0.12;
-    updateCatTarget();
-  }
+function switchLane(dir) {
+  if (gameState !== 'playing' || isTransitioning || isStunned) return;
+  const newLane = laneIndex + dir;
+  if (newLane < 0 || newLane > 2) return;
+  laneIndex = newLane;
+  isTransitioning = true;
+  transFromX = catX;
+  transToX = CONFIG.LANES[laneIndex];
+  transStart = performance.now();
 }
 
 document.addEventListener('keydown', (e) => {
   if (gameState === 'title' && (e.key === 'Enter' || e.key === ' ')) {
-    startGame();
-    return;
+    startGame(); return;
   }
-  if (gameState !== 'playing') return;
-
-  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') moveLeft();
-  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') moveRight();
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') switchLane(-1);
+  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') switchLane(1);
 });
 
-// Touch / click
-let touchStartX = null;
-
+const canvas = document.getElementById('game');
 canvas.addEventListener('touchstart', (e) => {
   e.preventDefault();
   touchStartX = e.touches[0].clientX;
@@ -1270,39 +1064,26 @@ canvas.addEventListener('touchstart', (e) => {
 canvas.addEventListener('touchend', (e) => {
   e.preventDefault();
   if (touchStartX === null) return;
-  const touchEndX = e.changedTouches[0].clientX;
-  const diff = touchEndX - touchStartX;
-
-  if (Math.abs(diff) > 20) {
-    // Swipe
-    if (diff < 0) moveLeft();
-    else moveRight();
+  const dx = e.changedTouches[0].clientX - touchStartX;
+  if (Math.abs(dx) > 25) {
+    switchLane(dx > 0 ? 1 : -1);
   } else {
-    // Tap
-    if (touchStartX < window.innerWidth / 2) moveLeft();
-    else moveRight();
+    // Tap: left half = left, right half = right
+    if (touchStartX < window.innerWidth / 2) switchLane(-1);
+    else switchLane(1);
   }
   touchStartX = null;
 }, { passive: false });
 
 canvas.addEventListener('click', (e) => {
   if (gameState !== 'playing') return;
-  if (e.clientX < window.innerWidth / 2) moveLeft();
-  else moveRight();
+  if (e.clientX < window.innerWidth / 2) switchLane(-1);
+  else switchLane(1);
 });
 
-// ─── GAME LOOP ───
-function gameLoop(timestamp) {
-  const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
-  lastTime = timestamp;
-
-  update(dt);
-  render();
-  requestAnimationFrame(gameLoop);
-}
-
 // ─── INIT ───
-generateWorld();
+initThree();
+createCat();
 showTitleScreen();
 lastTime = performance.now();
 requestAnimationFrame(gameLoop);

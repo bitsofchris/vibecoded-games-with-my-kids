@@ -1,0 +1,1311 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Easter Egg Cat</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fredoka+One&family=Nunito:wght@400;700;800&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: #1a0a2e;
+    overflow: hidden;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    font-family: 'Nunito', sans-serif;
+  }
+
+  canvas {
+    display: block;
+    width: 100vw;
+    height: 100vh;
+  }
+
+  .home-btn {
+    position: fixed;
+    top: 12px;
+    left: 12px;
+    z-index: 1000;
+    text-decoration: none;
+    font-size: 28px;
+    background: rgba(255,255,255,0.15);
+    border: 1px solid rgba(255,255,255,0.25);
+    border-radius: 50%;
+    width: 44px;
+    height: 44px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    touch-action: manipulation;
+    backdrop-filter: blur(8px);
+  }
+
+  #ui-overlay {
+    position: fixed;
+    top: 12px;
+    right: 16px;
+    z-index: 100;
+    display: none;
+    gap: 10px;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  #ui-overlay.active { display: flex; }
+
+  .ui-badge {
+    font-family: 'Fredoka One', cursive;
+    font-size: 18px;
+    color: #fff;
+    background: rgba(0,0,0,0.4);
+    backdrop-filter: blur(8px);
+    padding: 6px 14px;
+    border-radius: 20px;
+    border: 2px solid rgba(255,255,255,0.15);
+    text-shadow: 0 1px 3px rgba(0,0,0,0.5);
+    white-space: nowrap;
+  }
+
+  .egg-count { border-color: rgba(255,182,193,0.4); }
+  .level-badge { border-color: rgba(255,223,100,0.4); }
+
+  #screen-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 200;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: rgba(20,10,40,0.85);
+    backdrop-filter: blur(12px);
+    transition: opacity 0.3s;
+  }
+
+  #screen-overlay.hidden {
+    opacity: 0;
+    pointer-events: none;
+  }
+
+  .screen-title {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(2.2rem, 7vw, 4rem);
+    color: #fff;
+    text-shadow: 0 3px 20px rgba(255,150,200,0.5), 0 0 40px rgba(255,200,100,0.3);
+    margin-bottom: 8px;
+    text-align: center;
+    line-height: 1.1;
+  }
+
+  .screen-subtitle {
+    font-family: 'Nunito', sans-serif;
+    font-size: clamp(1rem, 3vw, 1.3rem);
+    color: rgba(255,255,255,0.7);
+    margin-bottom: 30px;
+    text-align: center;
+    max-width: 400px;
+    line-height: 1.5;
+  }
+
+  .screen-emoji {
+    font-size: clamp(3rem, 10vw, 5rem);
+    margin-bottom: 16px;
+    animation: bounce 1.5s ease-in-out infinite;
+  }
+
+  @keyframes bounce {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-12px); }
+  }
+
+  .btn {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.1rem;
+    border: none;
+    border-radius: 30px;
+    padding: 14px 40px;
+    cursor: pointer;
+    transition: transform 0.15s, box-shadow 0.15s;
+    letter-spacing: 1px;
+    touch-action: manipulation;
+    margin: 6px;
+  }
+
+  .btn:hover { transform: scale(1.05); }
+  .btn:active { transform: scale(0.97); }
+
+  .btn-primary {
+    background: linear-gradient(135deg, #ff7eb3, #ff758c);
+    color: #fff;
+    box-shadow: 0 4px 20px rgba(255,120,160,0.4);
+  }
+
+  .btn-secondary {
+    background: rgba(255,255,255,0.1);
+    color: #fff;
+    border: 2px solid rgba(255,255,255,0.2);
+  }
+
+  .controls-help {
+    display: flex;
+    gap: 20px;
+    margin: 16px 0 24px;
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+
+  .control-item {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: rgba(255,255,255,0.6);
+    font-size: 0.9rem;
+  }
+
+  .key-icon {
+    background: rgba(255,255,255,0.12);
+    border: 1px solid rgba(255,255,255,0.2);
+    border-radius: 6px;
+    padding: 4px 10px;
+    font-family: 'Fredoka One', cursive;
+    font-size: 0.8rem;
+    color: #fff;
+  }
+
+  .level-announce {
+    font-family: 'Fredoka One', cursive;
+    font-size: clamp(3rem, 10vw, 5rem);
+    color: #fff;
+    text-shadow: 0 3px 30px rgba(255,200,100,0.6);
+    animation: levelPop 0.5s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+
+  @keyframes levelPop {
+    0% { transform: scale(0.3); opacity: 0; }
+    100% { transform: scale(1); opacity: 1; }
+  }
+
+  .stats-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 12px;
+    margin: 16px 0 24px;
+    min-width: 260px;
+  }
+
+  .stat-box {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.1);
+    border-radius: 12px;
+    padding: 12px;
+    text-align: center;
+  }
+
+  .stat-val {
+    font-family: 'Fredoka One', cursive;
+    font-size: 1.5rem;
+    color: #ffcc70;
+  }
+
+  .stat-label {
+    font-size: 0.75rem;
+    color: rgba(255,255,255,0.5);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    margin-top: 2px;
+  }
+
+  .progress-bar-container {
+    position: fixed;
+    bottom: 16px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 100;
+    display: none;
+    width: min(80vw, 400px);
+  }
+
+  .progress-bar-container.active { display: block; }
+
+  .progress-bar-bg {
+    width: 100%;
+    height: 20px;
+    background: rgba(0,0,0,0.4);
+    border-radius: 12px;
+    border: 2px solid rgba(255,255,255,0.15);
+    overflow: hidden;
+    backdrop-filter: blur(8px);
+  }
+
+  .progress-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #ff9a9e, #fad0c4, #a18cd1);
+    border-radius: 10px;
+    transition: width 0.3s ease;
+    width: 0%;
+  }
+
+  .progress-label {
+    text-align: center;
+    font-family: 'Fredoka One', cursive;
+    font-size: 12px;
+    color: rgba(255,255,255,0.7);
+    margin-top: 4px;
+  }
+</style>
+</head>
+<body>
+
+<a href="../" class="home-btn" aria-label="Back to Arcade">&#x1F3E0;</a>
+
+<canvas id="game"></canvas>
+
+<div id="ui-overlay">
+  <div class="ui-badge egg-count" id="egg-badge">&#x1F95A; 0 / 10</div>
+  <div class="ui-badge level-badge" id="level-badge">Level 1</div>
+</div>
+
+<div class="progress-bar-container" id="progress-bar">
+  <div class="progress-bar-bg">
+    <div class="progress-bar-fill" id="progress-fill"></div>
+  </div>
+  <div class="progress-label" id="progress-label">0 / 10 eggs</div>
+</div>
+
+<div id="screen-overlay">
+  <div id="screen-content"></div>
+</div>
+
+<script>
+// ─── GAME CONFIG ───
+const CONFIG = {
+  lanes: [-1.5, 0, 1.5],
+  laneWidth: 1.2,
+  scrollSpeed: 4.5,
+  spawnInterval: 0.5,
+  catSize: 50,
+  eggSize: 32,
+  obstacleSize: 40,
+  eggColors: ['#FF9AA2', '#FFB7B2', '#FFDAC1', '#E2F0CB', '#B5EAD7', '#C7CEEA', '#DCD3FF', '#FFF1BA'],
+  eggPatterns: ['dots', 'stripes', 'zigzag', 'stars', 'plain'],
+  grassColor: '#7EC850',
+  skyTop: '#87CEEB',
+  skyBottom: '#E0F4FF',
+  flowerColors: ['#FF6B8A', '#FFD93D', '#FF8ED4', '#9B6BFF', '#FF9E5E', '#fff'],
+  levelEggs: level => 8 + level * 4,
+  levelSpeed: level => 4.5 + level * 0.3,
+  maxLevel: 10,
+};
+
+// ─── GAME STATE ───
+const canvas = document.getElementById('game');
+const ctx = canvas.getContext('2d');
+let W, H, scale;
+let gameState = 'title'; // title, playing, levelIntro, success, fail, win
+let currentLevel = 1;
+let eggsCollected = 0;
+let eggsNeeded = CONFIG.levelEggs(1);
+let catLane = 1; // 0, 1, 2
+let catX, catY;
+let catTargetX;
+let catBobTimer = 0;
+let catStunTimer = 0;
+let scrollOffset = 0;
+let entities = [];
+let particles = [];
+let petals = [];
+let grassTufts = [];
+let bgFlowers = [];
+let clouds = [];
+let score = 0;
+let totalEggsAllLevels = 0;
+let inputCooldown = 0;
+let lastTime = 0;
+let comboTimer = 0;
+let comboCount = 0;
+let screenShake = 0;
+let flashTimer = 0;
+let flashColor = '';
+
+// ─── RESIZE ───
+function resize() {
+  W = canvas.width = window.innerWidth * window.devicePixelRatio;
+  H = canvas.height = window.innerHeight * window.devicePixelRatio;
+  canvas.style.width = window.innerWidth + 'px';
+  canvas.style.height = window.innerHeight + 'px';
+  scale = Math.min(W, H) / 600;
+  catY = H * 0.72;
+  updateCatTarget();
+}
+window.addEventListener('resize', resize);
+resize();
+
+function updateCatTarget() {
+  catTargetX = W / 2 + CONFIG.lanes[catLane] * 80 * scale;
+  if (catX === undefined) catX = catTargetX;
+}
+updateCatTarget();
+
+// ─── DRAWING HELPERS ───
+function drawEgg(x, y, size, color, pattern, rotation = 0) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.rotate(rotation);
+
+  // Shadow
+  ctx.beginPath();
+  ctx.ellipse(0, size * 0.35, size * 0.3, size * 0.08, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fill();
+
+  // Egg shape
+  ctx.beginPath();
+  ctx.ellipse(0, 0, size * 0.38, size * 0.5, 0, 0, Math.PI * 2);
+  ctx.fillStyle = color;
+  ctx.fill();
+
+  // Shine
+  ctx.beginPath();
+  ctx.ellipse(-size * 0.1, -size * 0.15, size * 0.12, size * 0.2, -0.3, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(255,255,255,0.4)';
+  ctx.fill();
+
+  // Pattern
+  ctx.globalAlpha = 0.35;
+  if (pattern === 'dots') {
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a) * size * 0.2, Math.sin(a) * size * 0.15, size * 0.05, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+    }
+  } else if (pattern === 'stripes') {
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = size * 0.06;
+    for (let i = -2; i <= 2; i++) {
+      ctx.beginPath();
+      ctx.moveTo(-size * 0.35, i * size * 0.15);
+      ctx.lineTo(size * 0.35, i * size * 0.15);
+      ctx.stroke();
+    }
+  } else if (pattern === 'zigzag') {
+    ctx.strokeStyle = '#fff';
+    ctx.lineWidth = size * 0.05;
+    ctx.beginPath();
+    for (let i = -3; i <= 3; i++) {
+      const yy = i * size * 0.12;
+      ctx.lineTo((i % 2 === 0 ? -1 : 1) * size * 0.2, yy);
+    }
+    ctx.stroke();
+  } else if (pattern === 'stars') {
+    ctx.fillStyle = '#fff';
+    for (let i = 0; i < 3; i++) {
+      const sx = (i - 1) * size * 0.2;
+      const sy = (i % 2 === 0 ? -1 : 1) * size * 0.1;
+      drawStar(sx, sy, size * 0.06, 5);
+    }
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
+
+function drawStar(x, y, r, points) {
+  ctx.beginPath();
+  for (let i = 0; i < points * 2; i++) {
+    const a = (i * Math.PI) / points - Math.PI / 2;
+    const radius = i % 2 === 0 ? r : r * 0.4;
+    const method = i === 0 ? 'moveTo' : 'lineTo';
+    ctx[method](x + Math.cos(a) * radius, y + Math.sin(a) * radius);
+  }
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawCat(x, y, stunned, bobOffset) {
+  const s = CONFIG.catSize * scale;
+  ctx.save();
+  ctx.translate(x, y + bobOffset);
+
+  if (stunned) {
+    ctx.globalAlpha = 0.5 + Math.sin(Date.now() * 0.02) * 0.3;
+  }
+
+  // Shadow
+  ctx.beginPath();
+  ctx.ellipse(0, s * 0.55, s * 0.45, s * 0.1, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fill();
+
+  // Body
+  ctx.beginPath();
+  ctx.ellipse(0, s * 0.15, s * 0.38, s * 0.35, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fill();
+
+  // Belly
+  ctx.beginPath();
+  ctx.ellipse(0, s * 0.22, s * 0.25, s * 0.22, 0, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFF8EE';
+  ctx.fill();
+
+  // Head
+  ctx.beginPath();
+  ctx.arc(0, -s * 0.2, s * 0.32, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFE4B5';
+  ctx.fill();
+
+  // Ears
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(side * s * 0.15, -s * 0.45);
+    ctx.lineTo(side * s * 0.3, -s * 0.65);
+    ctx.lineTo(side * s * 0.35, -s * 0.4);
+    ctx.closePath();
+    ctx.fillStyle = '#FFE4B5';
+    ctx.fill();
+    // Inner ear
+    ctx.beginPath();
+    ctx.moveTo(side * s * 0.19, -s * 0.46);
+    ctx.lineTo(side * s * 0.28, -s * 0.6);
+    ctx.lineTo(side * s * 0.32, -s * 0.42);
+    ctx.closePath();
+    ctx.fillStyle = '#FFB6C1';
+    ctx.fill();
+  }
+
+  // Eyes
+  const eyeY = -s * 0.22;
+  const blinkPhase = Math.sin(Date.now() * 0.003);
+  const eyeOpenness = blinkPhase > 0.95 ? 0.1 : 1;
+  for (const side of [-1, 1]) {
+    // White
+    ctx.beginPath();
+    ctx.ellipse(side * s * 0.12, eyeY, s * 0.1, s * 0.1 * eyeOpenness, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#fff';
+    ctx.fill();
+    // Pupil
+    if (eyeOpenness > 0.3) {
+      ctx.beginPath();
+      ctx.arc(side * s * 0.12, eyeY, s * 0.05, 0, Math.PI * 2);
+      ctx.fillStyle = '#2C2C2C';
+      ctx.fill();
+      // Glint
+      ctx.beginPath();
+      ctx.arc(side * s * 0.1, eyeY - s * 0.02, s * 0.02, 0, Math.PI * 2);
+      ctx.fillStyle = '#fff';
+      ctx.fill();
+    }
+  }
+
+  // Nose
+  ctx.beginPath();
+  ctx.moveTo(0, -s * 0.12);
+  ctx.lineTo(-s * 0.04, -s * 0.08);
+  ctx.lineTo(s * 0.04, -s * 0.08);
+  ctx.closePath();
+  ctx.fillStyle = '#FFB6C1';
+  ctx.fill();
+
+  // Mouth
+  ctx.beginPath();
+  ctx.moveTo(0, -s * 0.08);
+  ctx.quadraticCurveTo(-s * 0.06, -s * 0.02, -s * 0.1, -s * 0.05);
+  ctx.moveTo(0, -s * 0.08);
+  ctx.quadraticCurveTo(s * 0.06, -s * 0.02, s * 0.1, -s * 0.05);
+  ctx.strokeStyle = '#C08060';
+  ctx.lineWidth = 1.5 * scale;
+  ctx.stroke();
+
+  // Whiskers
+  for (const side of [-1, 1]) {
+    for (const angle of [-0.15, 0, 0.15]) {
+      ctx.beginPath();
+      ctx.moveTo(side * s * 0.15, -s * 0.1);
+      ctx.lineTo(side * s * 0.45, -s * 0.1 + angle * s);
+      ctx.strokeStyle = 'rgba(150,120,80,0.4)';
+      ctx.lineWidth = 1 * scale;
+      ctx.stroke();
+    }
+  }
+
+  // Tail
+  ctx.beginPath();
+  ctx.moveTo(-s * 0.3, s * 0.2);
+  const tailWag = Math.sin(Date.now() * 0.005) * s * 0.15;
+  ctx.quadraticCurveTo(-s * 0.6, s * 0.0 + tailWag, -s * 0.45, -s * 0.2 + tailWag);
+  ctx.strokeStyle = '#FFE4B5';
+  ctx.lineWidth = s * 0.12;
+  ctx.lineCap = 'round';
+  ctx.stroke();
+
+  // Easter bunny ears on head (little headband)
+  ctx.strokeStyle = '#FF69B4';
+  ctx.lineWidth = s * 0.04;
+  ctx.beginPath();
+  ctx.arc(0, -s * 0.5, s * 0.22, Math.PI * 0.85, Math.PI * 0.15, true);
+  ctx.stroke();
+
+  // Tiny bunny ears on headband
+  for (const side of [-0.7, 0.7]) {
+    const ex = side * s * 0.15;
+    const ey = -s * 0.56;
+    ctx.beginPath();
+    ctx.ellipse(ex, ey - s * 0.12, s * 0.05, s * 0.13, side * 0.2, 0, Math.PI * 2);
+    ctx.fillStyle = '#FF69B4';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(ex, ey - s * 0.11, s * 0.03, s * 0.09, side * 0.2, 0, Math.PI * 2);
+    ctx.fillStyle = '#FFB6C1';
+    ctx.fill();
+  }
+
+  // Basket on back
+  const basketY = s * 0.05;
+  ctx.fillStyle = '#D2691E';
+  ctx.beginPath();
+  ctx.moveTo(-s * 0.2, basketY);
+  ctx.lineTo(-s * 0.25, basketY + s * 0.2);
+  ctx.lineTo(s * 0.25, basketY + s * 0.2);
+  ctx.lineTo(s * 0.2, basketY);
+  ctx.closePath();
+  ctx.fill();
+  // Weave lines
+  ctx.strokeStyle = '#8B4513';
+  ctx.lineWidth = 1 * scale;
+  for (let i = 0; i < 3; i++) {
+    const ly = basketY + s * 0.05 + i * s * 0.05;
+    ctx.beginPath();
+    ctx.moveTo(-s * 0.23, ly);
+    ctx.lineTo(s * 0.23, ly);
+    ctx.stroke();
+  }
+  // Handle
+  ctx.beginPath();
+  ctx.arc(0, basketY - s * 0.05, s * 0.18, Math.PI * 1.15, Math.PI * 1.85, true);
+  ctx.strokeStyle = '#D2691E';
+  ctx.lineWidth = s * 0.04;
+  ctx.stroke();
+
+  // Mini eggs in basket
+  const miniEggs = Math.min(eggsCollected, 5);
+  for (let i = 0; i < miniEggs; i++) {
+    const ex = -s * 0.12 + i * s * 0.06;
+    const ey = basketY + s * 0.08;
+    ctx.beginPath();
+    ctx.ellipse(ex, ey, s * 0.035, s * 0.045, 0, 0, Math.PI * 2);
+    ctx.fillStyle = CONFIG.eggColors[i % CONFIG.eggColors.length];
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawObstacle(x, y, size, type) {
+  ctx.save();
+  ctx.translate(x, y);
+  const s = size * scale;
+
+  // Shadow
+  ctx.beginPath();
+  ctx.ellipse(0, s * 0.4, s * 0.4, s * 0.1, 0, 0, Math.PI * 2);
+  ctx.fillStyle = 'rgba(0,0,0,0.15)';
+  ctx.fill();
+
+  if (type === 'bush') {
+    // Thorny bush
+    ctx.fillStyle = '#2D5016';
+    for (let i = 0; i < 5; i++) {
+      const a = (i / 5) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a) * s * 0.15, Math.sin(a) * s * 0.1 - s * 0.05, s * 0.22, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = '#3D7020';
+    ctx.beginPath();
+    ctx.arc(0, -s * 0.05, s * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+    // Thorns
+    ctx.strokeStyle = '#1a3a08';
+    ctx.lineWidth = 2 * scale;
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * s * 0.2, Math.sin(a) * s * 0.15 - s * 0.05);
+      ctx.lineTo(Math.cos(a) * s * 0.35, Math.sin(a) * s * 0.25 - s * 0.05);
+      ctx.stroke();
+    }
+  } else {
+    // Mud puddle
+    ctx.beginPath();
+    ctx.ellipse(0, s * 0.1, s * 0.4, s * 0.2, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#8B6914';
+    ctx.fill();
+    ctx.beginPath();
+    ctx.ellipse(0, s * 0.08, s * 0.35, s * 0.16, 0, 0, Math.PI * 2);
+    ctx.fillStyle = '#9B7424';
+    ctx.fill();
+    // Bubbles
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.arc(-s * 0.1 + i * s * 0.1, s * 0.05 + Math.sin(Date.now() * 0.003 + i) * s * 0.02, s * 0.04, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(200,150,50,0.5)';
+      ctx.fill();
+    }
+  }
+
+  ctx.restore();
+}
+
+function drawFlower(x, y, size, color) {
+  ctx.save();
+  ctx.translate(x, y);
+  const s = size;
+  // Petals
+  for (let i = 0; i < 5; i++) {
+    const a = (i / 5) * Math.PI * 2 - Math.PI / 2;
+    ctx.beginPath();
+    ctx.ellipse(Math.cos(a) * s * 0.3, Math.sin(a) * s * 0.3, s * 0.25, s * 0.15, a, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+  // Center
+  ctx.beginPath();
+  ctx.arc(0, 0, s * 0.15, 0, Math.PI * 2);
+  ctx.fillStyle = '#FFD700';
+  ctx.fill();
+  ctx.restore();
+}
+
+function drawCloud(x, y, size) {
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  ctx.beginPath();
+  ctx.arc(0, 0, size, 0, Math.PI * 2);
+  ctx.arc(-size * 0.7, size * 0.1, size * 0.7, 0, Math.PI * 2);
+  ctx.arc(size * 0.7, size * 0.1, size * 0.7, 0, Math.PI * 2);
+  ctx.arc(-size * 0.3, -size * 0.5, size * 0.6, 0, Math.PI * 2);
+  ctx.arc(size * 0.3, -size * 0.4, size * 0.5, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ─── WORLD GENERATION ───
+function generateWorld() {
+  grassTufts = [];
+  bgFlowers = [];
+  clouds = [];
+  for (let i = 0; i < 80; i++) {
+    grassTufts.push({
+      x: Math.random() * W,
+      y: H * 0.45 + Math.random() * H * 0.55,
+      size: (3 + Math.random() * 6) * scale,
+      shade: Math.random() * 0.3,
+    });
+  }
+  for (let i = 0; i < 25; i++) {
+    bgFlowers.push({
+      x: Math.random() * W,
+      y: H * 0.5 + Math.random() * H * 0.35,
+      size: (4 + Math.random() * 8) * scale,
+      color: CONFIG.flowerColors[Math.floor(Math.random() * CONFIG.flowerColors.length)],
+    });
+  }
+  for (let i = 0; i < 5; i++) {
+    clouds.push({
+      x: Math.random() * W,
+      y: H * 0.05 + Math.random() * H * 0.2,
+      size: (20 + Math.random() * 30) * scale,
+      speed: (0.2 + Math.random() * 0.3) * scale,
+    });
+  }
+}
+
+// ─── SPAWNING ───
+let spawnTimer = 0;
+
+function spawnEntities(dt) {
+  spawnTimer -= dt;
+  if (spawnTimer > 0) return;
+
+  const interval = CONFIG.spawnInterval / (1 + (currentLevel - 1) * 0.08);
+  spawnTimer = interval + Math.random() * interval * 0.5;
+
+  // Pick lanes
+  const occupiedLanes = [];
+  const eggChance = 0.65;
+  const obstacleChance = 0.15 + currentLevel * 0.02;
+
+  for (let lane = 0; lane < 3; lane++) {
+    const r = Math.random();
+    if (r < eggChance && occupiedLanes.length < 2) {
+      entities.push({
+        type: 'egg',
+        lane: lane,
+        x: W / 2 + CONFIG.lanes[lane] * 80 * scale,
+        y: -40 * scale,
+        size: CONFIG.eggSize,
+        color: CONFIG.eggColors[Math.floor(Math.random() * CONFIG.eggColors.length)],
+        pattern: CONFIG.eggPatterns[Math.floor(Math.random() * CONFIG.eggPatterns.length)],
+        rotation: Math.random() * 0.4 - 0.2,
+        bobPhase: Math.random() * Math.PI * 2,
+      });
+      occupiedLanes.push(lane);
+    } else if (r < eggChance + obstacleChance && occupiedLanes.length < 2) {
+      entities.push({
+        type: 'obstacle',
+        lane: lane,
+        x: W / 2 + CONFIG.lanes[lane] * 80 * scale,
+        y: -40 * scale,
+        size: CONFIG.obstacleSize,
+        variant: Math.random() > 0.5 ? 'bush' : 'mud',
+      });
+      occupiedLanes.push(lane);
+    }
+  }
+}
+
+// ─── PARTICLES ───
+function spawnCollectParticles(x, y, color) {
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const speed = (2 + Math.random() * 3) * scale;
+    particles.push({
+      x, y,
+      vx: Math.cos(a) * speed,
+      vy: Math.sin(a) * speed - 2 * scale,
+      size: (3 + Math.random() * 4) * scale,
+      color: color,
+      life: 1,
+      decay: 1.5 + Math.random() * 0.5,
+      type: 'sparkle',
+    });
+  }
+}
+
+function spawnStunParticles(x, y) {
+  for (let i = 0; i < 8; i++) {
+    particles.push({
+      x: x + (Math.random() - 0.5) * 40 * scale,
+      y: y + (Math.random() - 0.5) * 40 * scale,
+      vx: (Math.random() - 0.5) * 2 * scale,
+      vy: -2 * scale * Math.random(),
+      size: (8 + Math.random() * 6) * scale,
+      color: '#FFD700',
+      life: 1,
+      decay: 2,
+      type: 'star',
+    });
+  }
+}
+
+function spawnPetals() {
+  if (petals.length < 15 && Math.random() < 0.03) {
+    petals.push({
+      x: Math.random() * W,
+      y: -10,
+      vx: (Math.random() - 0.5) * 0.5 * scale,
+      vy: (0.5 + Math.random() * 0.8) * scale,
+      size: (4 + Math.random() * 4) * scale,
+      rotation: Math.random() * Math.PI * 2,
+      rotSpeed: (Math.random() - 0.5) * 0.05,
+      color: CONFIG.flowerColors[Math.floor(Math.random() * CONFIG.flowerColors.length)],
+      wobblePhase: Math.random() * Math.PI * 2,
+    });
+  }
+}
+
+// ─── UPDATE ───
+function update(dt) {
+  if (gameState !== 'playing') return;
+
+  const currentSpeed = CONFIG.levelSpeed(currentLevel);
+  scrollOffset += currentSpeed * scale * dt;
+
+  // Cat movement
+  const catMoveSpeed = 12 * scale;
+  const dx = catTargetX - catX;
+  if (Math.abs(dx) > 1) {
+    catX += dx * catMoveSpeed * dt;
+  } else {
+    catX = catTargetX;
+  }
+
+  catBobTimer += dt * 8;
+  if (catStunTimer > 0) catStunTimer -= dt;
+  if (inputCooldown > 0) inputCooldown -= dt;
+  if (comboTimer > 0) {
+    comboTimer -= dt;
+    if (comboTimer <= 0) comboCount = 0;
+  }
+
+  // Spawn
+  spawnEntities(dt);
+  spawnPetals();
+
+  // Move entities
+  for (const e of entities) {
+    e.y += currentSpeed * scale * dt * 60;
+    if (e.type === 'egg') {
+      e.bobPhase += dt * 3;
+      e.drawX = e.x + Math.sin(e.bobPhase) * 3 * scale;
+      e.drawY = e.y + Math.cos(e.bobPhase) * 2 * scale;
+    }
+  }
+
+  // Collision detection
+  const catHitRadius = CONFIG.catSize * scale * 0.35;
+  const catCenterY = catY + Math.sin(catBobTimer) * 3 * scale;
+
+  for (let i = entities.length - 1; i >= 0; i--) {
+    const e = entities[i];
+    const ex = e.type === 'egg' ? e.drawX : e.x;
+    const ey = e.type === 'egg' ? e.drawY : e.y;
+    const dist = Math.hypot(ex - catX, ey - catCenterY);
+    const hitDist = catHitRadius + e.size * scale * 0.4;
+
+    if (dist < hitDist) {
+      if (e.type === 'egg') {
+        // Collect!
+        eggsCollected++;
+        score += 10 * (1 + comboCount * 0.5);
+        comboCount++;
+        comboTimer = 1.5;
+        spawnCollectParticles(ex, ey, e.color);
+        flashTimer = 0.1;
+        flashColor = e.color;
+        entities.splice(i, 1);
+        updateUI();
+
+        if (eggsCollected >= eggsNeeded) {
+          levelComplete();
+        }
+      } else if (e.type === 'obstacle' && catStunTimer <= 0) {
+        // Hit!
+        catStunTimer = 1.0;
+        screenShake = 0.3;
+        spawnStunParticles(catX, catCenterY);
+        eggsCollected = Math.max(0, eggsCollected - 2);
+        entities.splice(i, 1);
+        updateUI();
+      }
+    }
+
+    // Remove off-screen
+    if (e.y > H + 60 * scale) {
+      entities.splice(i, 1);
+    }
+  }
+
+  // Particles
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+    p.x += p.vx;
+    p.y += p.vy;
+    p.vy += 0.1 * scale;
+    p.life -= p.decay * dt;
+    if (p.life <= 0) particles.splice(i, 1);
+  }
+
+  // Petals
+  for (let i = petals.length - 1; i >= 0; i--) {
+    const p = petals[i];
+    p.wobblePhase += dt * 2;
+    p.x += p.vx + Math.sin(p.wobblePhase) * 0.3 * scale;
+    p.y += p.vy;
+    p.rotation += p.rotSpeed;
+    if (p.y > H + 20) petals.splice(i, 1);
+  }
+
+  // Clouds
+  for (const c of clouds) {
+    c.x += c.speed * dt * 20;
+    if (c.x > W + c.size * 2) c.x = -c.size * 2;
+  }
+
+  // Screen shake
+  if (screenShake > 0) screenShake -= dt * 2;
+
+  // Move background flowers and grass with scroll
+  for (const f of bgFlowers) {
+    f.y += currentSpeed * scale * dt * 15;
+    if (f.y > H + 20) {
+      f.y = H * 0.45 - 20;
+      f.x = Math.random() * W;
+      f.color = CONFIG.flowerColors[Math.floor(Math.random() * CONFIG.flowerColors.length)];
+    }
+  }
+  for (const g of grassTufts) {
+    g.y += currentSpeed * scale * dt * 15;
+    if (g.y > H + 20) {
+      g.y = H * 0.4 - 20;
+      g.x = Math.random() * W;
+    }
+  }
+}
+
+// ─── RENDER ───
+function render() {
+  ctx.save();
+
+  // Screen shake
+  if (screenShake > 0) {
+    const shakeX = (Math.random() - 0.5) * screenShake * 20 * scale;
+    const shakeY = (Math.random() - 0.5) * screenShake * 20 * scale;
+    ctx.translate(shakeX, shakeY);
+  }
+
+  // Sky gradient
+  const skyGrad = ctx.createLinearGradient(0, 0, 0, H * 0.5);
+  skyGrad.addColorStop(0, CONFIG.skyTop);
+  skyGrad.addColorStop(1, CONFIG.skyBottom);
+  ctx.fillStyle = skyGrad;
+  ctx.fillRect(0, 0, W, H);
+
+  // Clouds
+  for (const c of clouds) {
+    drawCloud(c.x, c.y, c.size);
+  }
+
+  // Ground
+  const groundGrad = ctx.createLinearGradient(0, H * 0.42, 0, H);
+  groundGrad.addColorStop(0, '#8DD35F');
+  groundGrad.addColorStop(0.3, CONFIG.grassColor);
+  groundGrad.addColorStop(1, '#5DA03A');
+  ctx.fillStyle = groundGrad;
+  ctx.fillRect(0, H * 0.42, W, H * 0.58);
+
+  // Path/road
+  const pathWidth = CONFIG.laneWidth * 3 * 80 * scale;
+  const pathX = W / 2 - pathWidth / 2;
+  ctx.fillStyle = 'rgba(194,178,128,0.35)';
+  ctx.beginPath();
+  ctx.moveTo(pathX, H * 0.42);
+  ctx.lineTo(pathX + pathWidth, H * 0.42);
+  ctx.lineTo(pathX + pathWidth, H);
+  ctx.lineTo(pathX, H);
+  ctx.closePath();
+  ctx.fill();
+
+  // Lane dividers (subtle)
+  ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+  ctx.lineWidth = 2 * scale;
+  ctx.setLineDash([10 * scale, 15 * scale]);
+  for (let i = 0; i < 2; i++) {
+    const lx = W / 2 + (CONFIG.lanes[i] + CONFIG.lanes[i + 1]) / 2 * 80 * scale;
+    ctx.beginPath();
+    ctx.moveTo(lx, H * 0.42);
+    ctx.lineTo(lx, H);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+
+  // Grass tufts
+  for (const g of grassTufts) {
+    ctx.fillStyle = `rgba(100, 180, 60, ${0.3 + g.shade * 0.3})`;
+    ctx.beginPath();
+    ctx.moveTo(g.x - g.size, g.y);
+    ctx.quadraticCurveTo(g.x - g.size * 0.3, g.y - g.size * 2, g.x, g.y);
+    ctx.quadraticCurveTo(g.x + g.size * 0.3, g.y - g.size * 1.8, g.x + g.size, g.y);
+    ctx.fill();
+  }
+
+  // Background flowers
+  for (const f of bgFlowers) {
+    drawFlower(f.x, f.y, f.size, f.color);
+  }
+
+  // Entities (sorted by y for depth)
+  const sortedEntities = [...entities].sort((a, b) => a.y - b.y);
+  for (const e of sortedEntities) {
+    if (e.type === 'egg') {
+      drawEgg(e.drawX, e.drawY, e.size * scale, e.color, e.pattern, e.rotation);
+    } else {
+      drawObstacle(e.x, e.y, e.size, e.variant);
+    }
+  }
+
+  // Cat
+  const bobOffset = Math.sin(catBobTimer) * 3 * scale;
+  drawCat(catX, catY, catStunTimer > 0, bobOffset);
+
+  // Particles
+  for (const p of particles) {
+    ctx.globalAlpha = p.life;
+    if (p.type === 'star') {
+      ctx.fillStyle = p.color;
+      drawStar(p.x, p.y, p.size, 5);
+      ctx.fill();
+    } else {
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // Petals
+  for (const p of petals) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.rotation);
+    ctx.globalAlpha = 0.6;
+    ctx.fillStyle = p.color;
+    ctx.beginPath();
+    ctx.ellipse(0, 0, p.size, p.size * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // Flash effect
+  if (flashTimer > 0) {
+    ctx.globalAlpha = flashTimer * 3;
+    ctx.fillStyle = flashColor;
+    ctx.fillRect(0, 0, W, H);
+    ctx.globalAlpha = 1;
+    flashTimer -= 1 / 60;
+  }
+
+  // Easter egg border decorations
+  const borderEggSize = 12 * scale;
+  const time = Date.now() * 0.001;
+  ctx.globalAlpha = 0.15;
+  for (let i = 0; i < 8; i++) {
+    const ex = (i / 8) * W + Math.sin(time + i) * 10 * scale;
+    drawEgg(ex, 10 * scale, borderEggSize, CONFIG.eggColors[i % CONFIG.eggColors.length], 'plain', Math.sin(time + i) * 0.2);
+  }
+  ctx.globalAlpha = 1;
+
+  ctx.restore();
+}
+
+// ─── UI ───
+function updateUI() {
+  document.getElementById('egg-badge').innerHTML = `&#x1F95A; ${eggsCollected} / ${eggsNeeded}`;
+  document.getElementById('level-badge').textContent = `Level ${currentLevel}`;
+  document.getElementById('progress-fill').style.width = `${Math.min(100, (eggsCollected / eggsNeeded) * 100)}%`;
+  document.getElementById('progress-label').textContent = `${eggsCollected} / ${eggsNeeded} eggs`;
+}
+
+function showUI(show) {
+  document.getElementById('ui-overlay').classList.toggle('active', show);
+  document.getElementById('progress-bar').classList.toggle('active', show);
+}
+
+// ─── SCREENS ───
+const overlay = document.getElementById('screen-overlay');
+const content = document.getElementById('screen-content');
+
+function showScreen(html) {
+  content.innerHTML = html;
+  overlay.classList.remove('hidden');
+}
+
+function hideScreen() {
+  overlay.classList.add('hidden');
+}
+
+function showTitleScreen() {
+  gameState = 'title';
+  showUI(false);
+  showScreen(`
+    <div class="screen-emoji">&#x1F430;&#x1F431;</div>
+    <div class="screen-title">Easter Egg Cat</div>
+    <div class="screen-subtitle">Help kitty collect Easter eggs in the spring meadow! Fill your basket to complete each level.</div>
+    <div class="controls-help">
+      <div class="control-item"><span class="key-icon">&larr; &rarr;</span> Switch lanes</div>
+      <div class="control-item"><span class="key-icon">A D</span> Switch lanes</div>
+      <div class="control-item"><span class="key-icon">Tap</span> Left / Right</div>
+    </div>
+    <div>
+      <button class="btn btn-primary" onclick="startGame()">Start Game</button>
+    </div>
+  `);
+}
+
+function showLevelIntro() {
+  gameState = 'levelIntro';
+  showUI(false);
+  showScreen(`
+    <div class="screen-emoji">&#x1F95A;</div>
+    <div class="level-announce">Level ${currentLevel}</div>
+    <div class="screen-subtitle">Collect ${eggsNeeded} eggs!</div>
+  `);
+  setTimeout(() => {
+    if (gameState === 'levelIntro') {
+      hideScreen();
+      gameState = 'playing';
+      showUI(true);
+    }
+  }, 1800);
+}
+
+function levelComplete() {
+  gameState = 'success';
+  totalEggsAllLevels += eggsCollected;
+  showUI(false);
+
+  if (currentLevel >= CONFIG.maxLevel) {
+    showScreen(`
+      <div class="screen-emoji">&#x1F3C6;</div>
+      <div class="screen-title">You Win!</div>
+      <div class="screen-subtitle">Amazing! You collected all the Easter eggs!</div>
+      <div class="stats-grid">
+        <div class="stat-box"><div class="stat-val">${totalEggsAllLevels}</div><div class="stat-label">Total Eggs</div></div>
+        <div class="stat-box"><div class="stat-val">${Math.floor(score)}</div><div class="stat-label">Score</div></div>
+        <div class="stat-box"><div class="stat-val">${CONFIG.maxLevel}</div><div class="stat-label">Levels</div></div>
+        <div class="stat-box"><div class="stat-val">&#x2B50;</div><div class="stat-label">Champion</div></div>
+      </div>
+      <div>
+        <button class="btn btn-primary" onclick="resetAndStart()">Play Again</button>
+        <button class="btn btn-secondary" onclick="showTitleScreen()">Menu</button>
+      </div>
+    `);
+    return;
+  }
+
+  showScreen(`
+    <div class="screen-emoji">&#x1F389;</div>
+    <div class="screen-title">Level ${currentLevel} Complete!</div>
+    <div class="screen-subtitle">Great job collecting ${eggsCollected} eggs!</div>
+    <div class="stats-grid">
+      <div class="stat-box"><div class="stat-val">${eggsCollected}</div><div class="stat-label">Eggs</div></div>
+      <div class="stat-box"><div class="stat-val">${Math.floor(score)}</div><div class="stat-label">Score</div></div>
+    </div>
+    <div>
+      <button class="btn btn-primary" onclick="nextLevel()">Next Level</button>
+      <button class="btn btn-secondary" onclick="showTitleScreen()">Menu</button>
+    </div>
+  `);
+}
+
+function startGame() {
+  currentLevel = 1;
+  score = 0;
+  totalEggsAllLevels = 0;
+  resetLevel();
+  showLevelIntro();
+}
+
+function resetAndStart() {
+  currentLevel = 1;
+  score = 0;
+  totalEggsAllLevels = 0;
+  resetLevel();
+  showLevelIntro();
+}
+
+function nextLevel() {
+  currentLevel++;
+  resetLevel();
+  showLevelIntro();
+}
+
+function resetLevel() {
+  eggsCollected = 0;
+  eggsNeeded = CONFIG.levelEggs(currentLevel);
+  catLane = 1;
+  catStunTimer = 0;
+  entities = [];
+  particles = [];
+  spawnTimer = 0;
+  comboCount = 0;
+  comboTimer = 0;
+  screenShake = 0;
+  flashTimer = 0;
+  updateCatTarget();
+  catX = catTargetX;
+  updateUI();
+  generateWorld();
+}
+
+// Make functions accessible from onclick
+window.startGame = startGame;
+window.resetAndStart = resetAndStart;
+window.nextLevel = nextLevel;
+window.showTitleScreen = showTitleScreen;
+
+// ─── INPUT ───
+function moveLeft() {
+  if (catLane > 0 && inputCooldown <= 0) {
+    catLane--;
+    inputCooldown = 0.12;
+    updateCatTarget();
+  }
+}
+
+function moveRight() {
+  if (catLane < 2 && inputCooldown <= 0) {
+    catLane++;
+    inputCooldown = 0.12;
+    updateCatTarget();
+  }
+}
+
+document.addEventListener('keydown', (e) => {
+  if (gameState === 'title' && (e.key === 'Enter' || e.key === ' ')) {
+    startGame();
+    return;
+  }
+  if (gameState !== 'playing') return;
+
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') moveLeft();
+  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') moveRight();
+});
+
+// Touch / click
+let touchStartX = null;
+
+canvas.addEventListener('touchstart', (e) => {
+  e.preventDefault();
+  touchStartX = e.touches[0].clientX;
+}, { passive: false });
+
+canvas.addEventListener('touchend', (e) => {
+  e.preventDefault();
+  if (touchStartX === null) return;
+  const touchEndX = e.changedTouches[0].clientX;
+  const diff = touchEndX - touchStartX;
+
+  if (Math.abs(diff) > 20) {
+    // Swipe
+    if (diff < 0) moveLeft();
+    else moveRight();
+  } else {
+    // Tap
+    if (touchStartX < window.innerWidth / 2) moveLeft();
+    else moveRight();
+  }
+  touchStartX = null;
+}, { passive: false });
+
+canvas.addEventListener('click', (e) => {
+  if (gameState !== 'playing') return;
+  if (e.clientX < window.innerWidth / 2) moveLeft();
+  else moveRight();
+});
+
+// ─── GAME LOOP ───
+function gameLoop(timestamp) {
+  const dt = Math.min((timestamp - lastTime) / 1000, 0.05);
+  lastTime = timestamp;
+
+  update(dt);
+  render();
+  requestAnimationFrame(gameLoop);
+}
+
+// ─── INIT ───
+generateWorld();
+showTitleScreen();
+lastTime = performance.now();
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>

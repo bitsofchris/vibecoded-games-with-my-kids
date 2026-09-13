@@ -2946,10 +2946,13 @@ function updateFlight(dt) {
   // over the ground ahead, and a ceiling over the cloud sea. Then the flight
   // takes the altitude back from where he left it.
   if (state.aimHold > 0) {
-    const aimed = Math.max(-16, Math.min(CLIMB, Math.sin(state.aim) * SPEED));
+    const aimed = Math.max(-AIM.sink, Math.min(AIM.rise, Math.sin(state.aim) * SPEED));
     vyTarget += (aimed - vyTarget) * state.aimHold;
     vyTarget = Math.min(vyTarget, (AIM.ceiling - state.y) * AIM.brake);
-    vyTarget = Math.max(vyTarget, (Math.max(ahead + 18, here + 28, wall) - state.y) * AIM.brake);
+    // Gryphon Flying: a steered dive may go down to ten meters over the ground
+    // and the canopy just ahead; the hard clamp below still stops a collision.
+    const floorAhead = state.aim < -0.05 ? Math.max(terrainAhead(160) + 10, here + 10) : Math.max(ahead + 18, here + 28, wall);
+    vyTarget = Math.max(vyTarget, (floorAhead - state.y) * AIM.brake);
     if (!steering()) {
       state.aimHold = Math.max(0, state.aimHold - dt / AIM.release);
       if (state.aimHold === 0) {
@@ -2962,7 +2965,8 @@ function updateFlight(dt) {
   }
   // Pulling up answers faster than settling down, so a canopy or a wall
   // entering the look-ahead lifts the bird before the clearance clamp must.
-  state.vy += (vyTarget - state.vy) * Math.min(1, dt * (vyTarget > state.vy ? 2.6 : 0.9));
+  // a steered descent answers about as fast as a climb, so a held dive is felt at once
+  state.vy += (vyTarget - state.vy) * Math.min(1, dt * (vyTarget > state.vy ? 2.6 : state.aimHold > 0 ? 2.2 : 0.9));
   // move
   const fx = Math.sin(state.heading),
     fz = Math.cos(state.heading);
@@ -3014,8 +3018,13 @@ const AIM = {
   // The ends of the stick are the ends of the bird's own envelope: a full
   // drag reaches its fastest climb or its fastest descent and no further, so
   // the nose stays well short of anything like a loop and no travel is dead.
-  up: Math.asin(CLIMB / SPEED),
-  down: Math.asin(16 / SPEED),
+  // Gryphon Flying: the player's stick reaches well past the flight's own
+  // envelope (11 m/s up, 16 m/s down), so a held key or drag really climbs
+  // and really dives; the flight's own cruising still uses CLIMB.
+  rise: 22, // m/s, the steepest steered climb
+  sink: 28, // m/s, the steepest steered dive
+  up: Math.asin(22 / SPEED),
+  down: Math.asin(28 / SPEED),
   release: 2.2, // seconds over which the flight takes the altitude back
   ceiling: DECK_Y + 620, // where a steered climb eases off, over the deck and the tallest summit
   brake: 0.35, // how firmly the ground ahead and the ceiling take the aim back
@@ -3102,7 +3111,7 @@ window.addEventListener('keydown', (e) => {
 // for as long as they are held: left and right turn the gryphon, up and down
 // aim its nose. Upstream's arrows only nudged a turn that faded on its own.
 const KEY_ALIAS = { a: 'ArrowLeft', d: 'ArrowRight', w: 'ArrowUp', s: 'ArrowDown', A: 'ArrowLeft', D: 'ArrowRight', W: 'ArrowUp', S: 'ArrowDown' };
-const KEY_RATE = { turn: 0.9, aim: 0.5 }; // radians per second of held key
+const KEY_RATE = { turn: 0.9, aim: 1.0 }; // radians per second of held key
 const held = new Set();
 window.addEventListener('keyup', (e) => held.delete(KEY_ALIAS[e.key] ?? e.key));
 window.addEventListener('blur', () => held.clear());

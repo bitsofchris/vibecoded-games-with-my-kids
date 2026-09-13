@@ -1,6 +1,7 @@
 # Gryphon Flying — build plan
 
-Status: **Phases 0–2 shipped** (baseline, arcade chrome, gryphon, arrow/WASD steering). Next: Phase 3 robots, Phase 4 attack swoop.
+Status: **Phases 0–5 shipped** (baseline, arcade chrome, gryphon, arrow/WASD steering, robots, swoop, score, sounds, cheer). Next: iPad play-test, tune, then bite/stomp variants and a ground mode (Chris wants to walk around eventually).
+Design change during Phase 4 (Chris): the swoop does not steer through the engine's flight controller; `src/hunt.js` flies the gryphon itself along two arcs with no floors or limits, then hands back.
 Decisions (2026-09-13, Chris): snapshot vendoring; assisted flight with auto-swoop on an acquired target; daytime held; no pause between phases, gryphon in before anything goes live.
 Source brief: [`gryphon-flying/HANDOFF.md`](../../gryphon-flying/HANDOFF.md).
 Upstream: [kunchenguid/fly-with-me](https://github.com/kunchenguid/fly-with-me), MIT, vendored at `38857e6` (2026-09-13).

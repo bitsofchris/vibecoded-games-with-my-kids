@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { buildBird, animateBird } from './birds.js';
 import { plumageCatalog, paintMarking, plumageTile } from './plumage.js';
 import { createGryphon } from './characters/gryphon.js';
+import { createHunt } from './hunt.js';
 import {
   WebGPURenderer,
   MeshStandardNodeMaterial,
@@ -2423,12 +2424,12 @@ scene.add(bird);
 // shadows like everything else in the world.
 // ---------------------------------------------------------------------------
 const GRYPHON_SPAN = 11; // wingspan in world meters; the model's own is 8 units
-const gryphon = createGryphon(THREE, {
-  materialFactory: (hex) => {
-    const c = new THREE.Color(hex);
-    return litMaterial(vec3(c.r, c.g, c.b));
-  },
-});
+const gryphonMaterial = (hex) => {
+  const c = new THREE.Color(hex);
+  return litMaterial(vec3(c.r, c.g, c.b));
+};
+const gryphon = createGryphon(THREE, { materialFactory: gryphonMaterial });
+let hunt = null; // the robots and the swoop, built once flight, camera and sound exist
 for (const child of [...bird.children]) {
   bird.remove(child);
   child.traverse((o) => o.isMesh && o.geometry.dispose());
@@ -2444,6 +2445,10 @@ function animateGryphon(dt, flapping) {
   gryphonPose.flap += (flapTarget - gryphonPose.flap) * Math.min(1, dt * 3);
   const diveTarget = Math.max(0, Math.min(1, -state.pitch * 2.2));
   gryphonPose.dive += (diveTarget - gryphonPose.dive) * Math.min(1, dt * 2.5);
+  gryphonPose.attack = hunt?.pose.attack ?? 0;
+  gryphonPose.bite = hunt?.pose.bite ?? 0;
+  // the sound's wing beats read the kit's phase; keep it moving at the gryphon's own rate
+  bird.userData.phase += dt * (2 + gryphonPose.flap * 7);
   gryphon.update(dt, gryphonPose);
 }
 // how far the kind hangs under its center, in world meters: legs, a long tail
@@ -2780,7 +2785,11 @@ function updateIntro() {
   if (!intro.beat) return;
   const t = state.t;
   if (intro.beat === 'side' && t >= INTRO.side) intro.beat = 'pivot';
-  if (intro.beat === 'pivot' && t >= INTRO.climbAt) intro.beat = 'climb';
+  // Gryphon Flying: the opening ends once the turn toward the sunrise is done.
+  // Upstream went on to climb above the clouds for a minute and a half; the
+  // hunt begins here instead, and the low stretch that follows keeps the
+  // gryphon near the ground where the robots are.
+  if (intro.beat === 'pivot' && t >= INTRO.climbAt) return endIntro('flown');
   if (intro.beat === 'climb' && (state.y > DECK_Y + INTRO.aboveBy || t >= INTRO.climbLimit)) {
     intro.beat = 'above';
     intro.at = t;
@@ -2844,6 +2853,18 @@ const flight = { lowNext: 160, lowUntil: 0, low: false, lowAmount: 0 };
 function updateFlight(dt) {
   state.t += dt;
   updateIntro();
+  // Gryphon Flying: the hunt ticks its robots and targeting every step, and
+  // while a swoop is under way it flies the gryphon itself, down onto the robot
+  // and back up, with none of the flight's floors or limits; the flight takes
+  // the gryphon back where the swoop leaves it.
+  hunt?.update(dt);
+  if (hunt?.driving) {
+    hunt.drive(dt);
+    bird.position.set(state.x, state.y, state.z);
+    bird.rotation.set(-state.pitch, state.heading, state.bank);
+    animateWings(bird, dt, state.flapping);
+    return;
+  }
   // where the schedule wants us: a slow climb through the deck every few
   // minutes, or where the opening is in its script
   const cyc = (((state.t - cloudOrigin) % 300) + 300) % 300;
@@ -2909,7 +2930,8 @@ function updateFlight(dt) {
   const ahead = terrainAhead(520),
     wall = climbAhead(2200);
   const cruise = Math.max(
-    ahead + 110 - 80 * low + 40 * (1 - 0.6 * low) * n1(state.t * 0.03, S1 + 4),
+    // Gryphon Flying: cruise a little lower than upstream's 110 m so the robots read from the air
+    ahead + 85 - 55 * low + 40 * (1 - 0.6 * low) * n1(state.t * 0.03, S1 + 4),
     SEA_LEVEL + 55 - 32 * low,
   );
   const high = DECK_Y + 190 + 30 * n1(state.t * 0.05, S1 + 8);
@@ -3062,6 +3084,10 @@ window.addEventListener('keydown', (e) => {
   if (e.target.closest('button, a, input') || !running) return;
   if (e.code === 'Space') {
     e.preventDefault();
+    if (!paused) hunt?.attack();
+    return;
+  }
+  if (e.key === 'p' || e.key === 'P' || e.key === 'Escape') {
     togglePause();
     return;
   }
@@ -3347,6 +3373,77 @@ const audio = (() => {
       g.disconnect();
     };
   }
+  // Gryphon Flying: the strike is a whoosh of the wind's own noise and a
+  // short metallic clank; the cheer is four quick notes up the scale.
+  function strike() {
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = noise;
+    const bp = ctx.createBiquadFilter();
+    bp.type = 'bandpass';
+    bp.Q.value = 0.8;
+    bp.frequency.setValueAtTime(300, t);
+    bp.frequency.exponentialRampToValueAtTime(1800, t + 0.18);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.5, t + 0.06);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.4);
+    src.connect(bp).connect(g).connect(master);
+    src.start(t, Math.random() * 3);
+    src.stop(t + 0.45);
+    src.onended = () => {
+      src.disconnect();
+      bp.disconnect();
+      g.disconnect();
+    };
+    const clank = ctx.createGain();
+    clank.gain.setValueAtTime(0.0001, t + 0.05);
+    clank.gain.exponentialRampToValueAtTime(0.35, t + 0.06);
+    clank.gain.exponentialRampToValueAtTime(0.0001, t + 0.7);
+    clank.connect(master);
+    clank.connect(delay);
+    const oscillators = [523, 761, 1187, 1913].map((f, i) => {
+      const o = ctx.createOscillator();
+      o.type = i % 2 ? 'square' : 'triangle';
+      o.frequency.value = f * (0.98 + Math.random() * 0.04);
+      const og = ctx.createGain();
+      og.gain.value = 0.35 / (i + 1);
+      o.connect(og).connect(clank);
+      o.start(t + 0.05);
+      o.stop(t + 0.8);
+      return { o, og };
+    });
+    oscillators[0].o.onended = () => {
+      for (const { o, og } of oscillators) {
+        o.disconnect();
+        og.disconnect();
+      }
+      clank.disconnect();
+    };
+  }
+  function cheer() {
+    if (!ctx) return;
+    const notes = [PENTA[2], PENTA[3], PENTA[4], PENTA[6]];
+    notes.forEach((f, i) => {
+      const t = ctx.currentTime + i * 0.13;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(0.22, t + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (i === notes.length - 1 ? 1.6 : 0.5));
+      const o = ctx.createOscillator();
+      o.type = 'triangle';
+      o.frequency.value = f;
+      o.connect(g).connect(master);
+      g.connect(delay);
+      o.start(t);
+      o.stop(t + 1.8);
+      o.onended = () => {
+        o.disconnect();
+        g.disconnect();
+      };
+    });
+  }
   function update(dt) {
     if (!ctx) return;
     const alt = Math.max(0, state.y - heightAt(state.x, state.z));
@@ -3407,6 +3504,8 @@ const audio = (() => {
     start,
     chime,
     flap,
+    strike,
+    cheer,
     update,
     toggleMute,
     setVolume,
@@ -3871,6 +3970,7 @@ function advance(dt, sound = true) {
   updateClouds(state.x, state.z, state.t);
   updateMoments(dt, sound);
   updateCamera(dt);
+  hunt?.updateScreen();
   placeGrass(camera.position.x, camera.position.z);
   updateAtmosphere(dt);
   if (performance.now() - lastSave > 2000) saveFlight();
@@ -4039,6 +4139,7 @@ function dispose() {
   running = false;
   renderer.setAnimationLoop(null);
   clearTimeout(openingTimer);
+  hunt?.dispose();
   const audioTask = audio.dispose();
   // Readback buffers must finish mapping before renderer disposal destroys them.
   disposalTask = Promise.all([timestampTask, captureTask, audioTask]).then(() => {
@@ -4110,9 +4211,29 @@ beginBtn.addEventListener('click', () => {
     if (!disposed && !paused && !document.hidden) audio.chime(3);
   }, 1800);
 });
+// Gryphon Flying: the hunt. Robots, targeting and the swoop live in
+// src/hunt.js; a swoop flies the gryphon itself through `updateFlight`.
+hunt = createHunt({
+  THREE,
+  scene,
+  state,
+  heightAt,
+  slopeAt,
+  obstacleFloor,
+  seaLevel: SEA_LEVEL,
+  seed,
+  materialFactory: gryphonMaterial,
+  camera,
+  releaseSunward,
+  canHunt: () => running && !paused && !disposed && !intro.beat,
+  sound: { strike: () => audio.strike(), cheer: () => audio.cheer() },
+});
 // expose a little for review tooling
 window.__fly = {
   state,
+  get hunt() {
+    return hunt;
+  },
   cam,
   perf,
   trace,

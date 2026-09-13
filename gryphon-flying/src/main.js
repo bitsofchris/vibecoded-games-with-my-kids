@@ -2885,11 +2885,15 @@ function updateFlight(dt) {
   cloudSchedule += (wantHigh - cloudSchedule) * Math.min(1, dt * 0.5);
   // heading: slow noise, a low sun or moon to fly at, the captain's nudge, and
   // steering that turns the bird directly
-  const wander = 0.22 * n1(state.t * 0.045 + 3.1, S2 + 5) + 0.08 * n1(state.t * 0.19, S2 + 9);
+  // Gryphon Flying: no wandering and no pull toward the sun or the stars. The
+  // player steers; left alone, the gryphon flies straight. Upstream's wander
+  // was 0.22 * n1(state.t * 0.045 + 3.1, S2 + 5) + 0.08 * n1(state.t * 0.19, S2 + 9)
+  // and its pull the larger of the sunward and nightward turns; the opening's
+  // own turn toward the sunrise below is kept.
+  const wander = 0;
   updateSunward();
   updateNightward(dt);
-  // one thing pulls at a time: a sky event first, then the night's one turn
-  const pull = Math.max(sunward.pull, nightward.pull);
+  const pull = 0;
   const pulled = sunward.pull >= nightward.pull ? sunward.heading : nightward.heading;
   const toward = Math.max(-0.2, Math.min(0.2, wrapAngle(pulled - state.heading) * 0.5));
   let yawRateTarget = wander * (1 - pull) + toward * pull + state.nudgeYaw;

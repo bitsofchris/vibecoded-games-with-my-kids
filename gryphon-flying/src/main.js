@@ -2850,6 +2850,10 @@ function updateTitle() {
 }
 // Now and then the bird drops for a low pass over gentle ground, then climbs back.
 const flight = { lowNext: 160, lowUntil: 0, low: false, lowAmount: 0 };
+// Gryphon Flying: the altitude the player steered to, as an offset from the
+// flight's own cruise, so the gryphon stays where it was put once the stick is
+// let go and only drifts back to cruise over a minute or so.
+let heldAlt = 0;
 function updateFlight(dt) {
   state.t += dt;
   updateIntro();
@@ -2936,6 +2940,9 @@ function updateFlight(dt) {
   );
   const high = DECK_Y + 190 + 30 * n1(state.t * 0.05, S1 + 8);
   let target = cruise + (high - Math.min(cruise, high)) * cloudSchedule + state.nudgeAlt;
+  if (state.aimHold > 0) heldAlt = state.y - target;
+  else heldAlt *= Math.exp(-dt / 75);
+  target = Math.min(target + heldAlt, AIM.ceiling);
   target = Math.max(target, ahead + 18, heightAt(state.x, state.z) + 28, wall);
   // A low pass follows the ground more eagerly: the gap the bird settles
   // into over falling ground is the ground's descent rate over this gain.
@@ -3090,7 +3097,11 @@ canvas.addEventListener(
   { passive: false },
 );
 window.addEventListener('keydown', (e) => {
-  if (e.target.closest('button, a, input') || !running) return;
+  if (!running) return;
+  // Gryphon Flying: arrows and WASD fly the gryphon whatever has focus, so a
+  // tap on the SWOOP button or the pause button never takes the keys away.
+  const flightKey = (KEY_ALIAS[e.key] ?? e.key).startsWith('Arrow');
+  if (!flightKey && e.target.closest('button, a, input')) return;
   if (e.code === 'Space') {
     e.preventDefault();
     if (!paused) hunt?.attack();
@@ -3105,6 +3116,13 @@ window.addEventListener('keydown', (e) => {
   e.preventDefault();
   if (paused) return;
   if (key === 'ArrowLeft' || key === 'ArrowRight') releaseSunward();
+  // a tap moves the gryphon a clear step at once; holding keeps it moving
+  if (!e.repeat && !held.has(key)) {
+    if (key === 'ArrowLeft') state.steer += KEY_TAP.turn;
+    if (key === 'ArrowRight') state.steer -= KEY_TAP.turn;
+    if (key === 'ArrowUp') aimBy(KEY_TAP.aim);
+    if (key === 'ArrowDown') aimBy(-KEY_TAP.aim);
+  }
   held.add(key);
 });
 // Gryphon Flying: held arrow keys (or WASD) steer the way a right-drag does,
@@ -3112,6 +3130,7 @@ window.addEventListener('keydown', (e) => {
 // aim its nose. Upstream's arrows only nudged a turn that faded on its own.
 const KEY_ALIAS = { a: 'ArrowLeft', d: 'ArrowRight', w: 'ArrowUp', s: 'ArrowDown', A: 'ArrowLeft', D: 'ArrowRight', W: 'ArrowUp', S: 'ArrowDown' };
 const KEY_RATE = { turn: 0.9, aim: 1.0 }; // radians per second of held key
+const KEY_TAP = { turn: 0.12, aim: 0.22 }; // radians a single tap moves at once
 const held = new Set();
 window.addEventListener('keyup', (e) => held.delete(KEY_ALIAS[e.key] ?? e.key));
 window.addEventListener('blur', () => held.clear());
@@ -3171,7 +3190,9 @@ function updateCamera(dt) {
   // Ground and canopies lift the camera quickly and let it settle back slowly.
   const floor = obstacleFloor(want.x, want.z);
   const lift = Math.max(0, floor + CAMERA.clearance - want.y);
-  cam.lift += (lift - cam.lift) * Math.min(1, dt * (lift > cam.lift ? 10 : 1.5));
+  // Gryphon Flying: on a swoop the camera crosses crowns fast; a gentler lift
+  // there keeps the view from hopping, and the swoop's own path stays clear.
+  cam.lift += (lift - cam.lift) * Math.min(1, dt * (lift > cam.lift ? (hunt?.driving ? 3.5 : 10) : 1.5));
   want.y = Math.max(want.y + cam.lift, floor + 7);
   camera.position.copy(want);
   // A kind may move where the camera looks, so a long neck sits in frame; the

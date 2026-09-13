@@ -33,32 +33,40 @@ const wrap = (a) => a - Math.round(a / (Math.PI * 2)) * Math.PI * 2;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
 // A quadratic Bezier arc with an arc-length table, so flight along it is at a
-// steady speed rather than a steady parameter.
-function makeArc(p0, c, p1, samples = 48) {
+// steady speed rather than a steady parameter. Position and tangent are the
+// curve's own, evaluated at the parameter the table gives for a distance, so
+// the flight is smooth rather than kinked at the table's joints.
+function makeArc(p0, c, p1, samples = 64) {
+  const point = (u) => {
+    const w0 = (1 - u) * (1 - u),
+      w1 = 2 * (1 - u) * u,
+      w2 = u * u;
+    return [w0 * p0[0] + w1 * c[0] + w2 * p1[0], w0 * p0[1] + w1 * c[1] + w2 * p1[1], w0 * p0[2] + w1 * c[2] + w2 * p1[2]];
+  };
+  const tangent = (u) => {
+    const a = 2 * (1 - u),
+      b = 2 * u;
+    return [a * (c[0] - p0[0]) + b * (p1[0] - c[0]), a * (c[1] - p0[1]) + b * (p1[1] - c[1]), a * (c[2] - p0[2]) + b * (p1[2] - c[2])];
+  };
   const pts = [],
     lens = [0];
   for (let i = 0; i <= samples; i++) {
-    const u = i / samples,
-      w0 = (1 - u) * (1 - u),
-      w1 = 2 * (1 - u) * u,
-      w2 = u * u;
-    pts.push([w0 * p0[0] + w1 * c[0] + w2 * p1[0], w0 * p0[1] + w1 * c[1] + w2 * p1[1], w0 * p0[2] + w1 * c[2] + w2 * p1[2]]);
+    pts.push(point(i / samples));
     if (i) lens.push(lens[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1], pts[i][2] - pts[i - 1][2]));
   }
   const length = lens[samples];
+  const paramAt = (s) => {
+    s = clamp(s, 0, length);
+    let i = 1;
+    while (i < samples && lens[i] < s) i++;
+    const seg = lens[i] - lens[i - 1];
+    return (i - 1 + (seg > 0 ? (s - lens[i - 1]) / seg : 0)) / samples;
+  };
   return {
     length,
     pts,
-    at(s) {
-      s = clamp(s, 0, length);
-      let i = 1;
-      while (i < samples && lens[i] < s) i++;
-      const a = pts[i - 1],
-        b = pts[i],
-        seg = lens[i] - lens[i - 1],
-        f = seg > 0 ? (s - lens[i - 1]) / seg : 0;
-      return [a[0] + (b[0] - a[0]) * f, a[1] + (b[1] - a[1]) * f, a[2] + (b[2] - a[2]) * f];
-    },
+    at: (s) => point(paramAt(s)),
+    tangent: (s) => tangent(paramAt(s)),
   };
 }
 
@@ -175,7 +183,7 @@ export function createHunt(deps) {
 
   // --- the swoop -----------------------------------------------------------
   // phases: flying -> diving -> striking (talons out, last meters) -> pulling -> flying
-  const swoop = { phase: 'flying', target: null, arc: null, s: 0, speed: 0, hit: false, lastHeading: 0, startY: 0 };
+  const swoop = { phase: 'flying', target: null, arc: null, s: 0, speed: 0, hit: false, startY: 0 };
   const pose = { attack: 0, bite: 0 };
   let score = 0;
 
@@ -212,7 +220,6 @@ export function createHunt(deps) {
     swoop.target = r;
     swoop.hit = false;
     swoop.startY = state.y;
-    swoop.lastHeading = state.heading;
     releaseSunward();
     ui.attackBtn.classList.add('busy');
     return true;
@@ -262,22 +269,22 @@ export function createHunt(deps) {
     const pulling = swoop.phase === 'pulling';
     const speedTarget = pulling ? SWOOP.pullSpeed : SWOOP.speed;
     swoop.speed += (speedTarget - swoop.speed) * Math.min(1, dt * (pulling ? 0.8 : 2.5));
-    const s0 = swoop.s;
+    const y0 = state.y;
     swoop.s = Math.min(arc.length, swoop.s + swoop.speed * dt);
     const [x, y, z] = arc.at(swoop.s);
-    const [nx, ny, nz] = arc.at(Math.min(arc.length, swoop.s + 2));
-    const dx = nx - x,
-      dy = ny - y,
-      dz = nz - z;
+    const [dx, dy, dz] = arc.tangent(swoop.s);
     const horiz = Math.hypot(dx, dz);
     const heading = horiz > 1e-6 ? Math.atan2(dx, dz) : state.heading;
     const pitch = Math.atan2(dy, Math.max(horiz, 1e-6)) * 1.15;
-    const turnRate = dt > 0 ? wrap(heading - swoop.lastHeading) / dt : 0;
-    swoop.lastHeading = heading;
+    // the turn rate from the curve itself, a little way ahead, so the bank
+    // leads the turn and never chatters with the frame rate
+    const [ax, , az] = arc.tangent(Math.min(arc.length, swoop.s + swoop.speed * 0.25));
+    const headingAhead = Math.hypot(ax, az) > 1e-6 ? Math.atan2(ax, az) : heading;
+    const turnRate = wrap(headingAhead - heading) / 0.25;
     state.x = x;
     state.y = y;
     state.z = z;
-    state.vy = dt > 0 ? (y - arc.at(s0)[1]) / dt : 0;
+    state.vy = dt > 0 ? (y - y0) / dt : 0;
     state.heading = heading;
     state.pitch += (pitch - state.pitch) * Math.min(1, dt * 5);
     state.bank += (-clamp(turnRate, -1.4, 1.4) * 1.1 - state.bank) * Math.min(1, dt * 3);

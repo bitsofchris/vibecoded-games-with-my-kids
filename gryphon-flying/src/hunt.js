@@ -23,8 +23,8 @@ const SWOOP = {
   pullSpeed: 46, // m/s the pull-up eases down to before the hand-back
   strikeAt: 45, // meters from the robot at which the talons come out
   reach: 10, // meters from the robot's middle that count as the strike
-  pullAhead: 230, // meters past the robot where the pull-up hands the gryphon back
-  pullRise: 60, // meters over the ground the pull-up ends at, if the dive started lower
+  pullAhead: 110, // meters past the robot where the pull-up hands the gryphon back
+  pullRise: 30, // meters over the ground the pull-up ends at; the flight climbs on from there
   clearance: 8, // meters the arcs keep over anything they cross
 };
 const CELEBRATE_EVERY = 5;
@@ -75,6 +75,7 @@ export function createHunt(deps) {
     materialFactory,
     camera,
     releaseSunward,
+    playerSteering, // () => boolean: the player is holding a steering key or drag
     canHunt, // () => boolean: false while the opening plays or the page is not running
     sound, // { strike(), cheer() } or null
   } = deps;
@@ -217,15 +218,15 @@ export function createHunt(deps) {
     return true;
   }
   function startPullUp(r) {
-    // out along the line of the dive, then up to where the dive began, or well
-    // over the ground if that was low, and hand back there
+    // a short pull out of the dive, just clear of the ground, and the player
+    // has the gryphon back; the flight climbs on toward cruise from there
     const fx = Math.sin(state.heading),
       fz = Math.cos(state.heading);
     const p0 = [state.x, state.y, state.z];
     const groundEnd = heightAt(state.x + fx * SWOOP.pullAhead, state.z + fz * SWOOP.pullAhead);
-    const endY = Math.max(swoop.startY, groundEnd + SWOOP.pullRise, r.y + r.height + SWOOP.pullRise);
+    const endY = Math.max(groundEnd + SWOOP.pullRise, r.y + r.height + SWOOP.pullRise, state.y + 12);
     const p1 = [state.x + fx * SWOOP.pullAhead, endY, state.z + fz * SWOOP.pullAhead];
-    const c = [state.x + fx * 90, state.y + (endY - state.y) * 0.05, state.z + fz * 90];
+    const c = [state.x + fx * 45, state.y + (endY - state.y) * 0.05, state.z + fz * 45];
     swoop.arc = liftClear(p0, c, p1);
     swoop.s = 0;
     swoop.phase = 'pulling';
@@ -294,7 +295,8 @@ export function createHunt(deps) {
         land(true);
         startPullUp(r);
       }
-    } else if (swoop.s >= arc.length) {
+    } else if (swoop.s >= arc.length || (swoop.s > 20 && playerSteering?.())) {
+      // the pull-up is done, or the player took the stick: theirs again
       handBack();
     }
   }

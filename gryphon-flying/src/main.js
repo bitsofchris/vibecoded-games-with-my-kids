@@ -4234,6 +4234,7 @@ hunt = createHunt({
   materialFactory: gryphonMaterial,
   camera,
   releaseSunward,
+  playerSteering: () => held.size > 0 || state.dragButton === 2,
   canHunt: () => running && !paused && !disposed && !intro.beat,
   sound: { strike: () => audio.strike(), cheer: () => audio.cheer() },
 });

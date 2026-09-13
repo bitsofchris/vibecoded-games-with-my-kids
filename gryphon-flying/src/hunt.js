@@ -22,14 +22,15 @@ const SWOOP = {
   range: 260, // meters: the ring turns red and SWOOP arms inside this
   speed: 64, // m/s along the dive, against a 40 m/s cruise
   pullSpeed: 46, // m/s the pull-up eases down to before the hand-back
-  strikeAt: 45, // meters from the robot at which the talons come out
+  strikeAt: 75, // meters from the robot at which the talons come out
+  holdAfter: 22, // meters past the robot the strike pose is held
   reach: 10, // meters from the robot's middle that count as the strike
   pullAhead: 110, // meters past the robot where the pull-up hands the gryphon back
   pullRise: 30, // meters over the ground the pull-up ends at; the flight climbs on from there
   clearance: 8, // meters the arcs keep over anything they cross
 };
 const CELEBRATE_EVERY = 5;
-const HIT = { stopMs: 200, stopScale: 0.18, shakeMs: 380, shakeAmp: 1.8, sparks: 26, ringSeconds: 0.5 };
+const HIT = { stopMs: 0, stopScale: 1, shakeMs: 380, shakeAmp: 1.8, sparks: 26, ringSeconds: 0.5 }; // no hit-stop: the gryphon flies straight through
 
 const wrap = (a) => a - Math.round(a / (Math.PI * 2)) * Math.PI * 2;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -490,9 +491,11 @@ export function createHunt(deps) {
       cancelSwoop();
     } else if (swoop.phase === 'flying') pickTarget();
     else if (swoop.target && !live.has(swoop.target.key) && swoop.phase !== 'pulling') cancelSwoop();
-    const talons = swoop.phase === 'striking' ? 1 : swoop.phase === 'diving' ? 0.3 : 0;
-    pose.attack += (talons - pose.attack) * Math.min(1, dt * 7);
-    pose.bite += ((swoop.phase === 'striking' ? 0.8 : 0) - pose.bite) * Math.min(1, dt * 7);
+    // claws out through the strike and a beat past the robot, then tucked away
+    const striking = swoop.phase === 'striking' || (swoop.phase === 'pulling' && swoop.s < SWOOP.holdAfter);
+    const talons = striking ? 1 : swoop.phase === 'diving' ? 0.25 : 0;
+    pose.attack += (talons - pose.attack) * Math.min(1, dt * (striking ? 10 : 5));
+    pose.bite += ((striking ? 1 : 0) - pose.bite) * Math.min(1, dt * 10);
   }
 
   function dispose() {

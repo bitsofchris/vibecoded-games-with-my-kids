@@ -317,18 +317,24 @@ export function createGryphon(THREE, options = {}) {
     }
 
     for (const leg of legs) {
-      // During attack, the front talons extend toward the target.
+      // During attack all four legs swing forward, talons leading, the way a
+      // raptor's do in the last moment of a strike.
       leg.joint.rotation.x =
         (1 - grounded) *
         (
           leg.front
-            ? 0.65 - attack * 1.65
-            : 0.95 - attack * 0.6
+            ? 0.65 - attack * 2.1
+            : 0.95 - attack * 1.5
         );
     }
 
+    // The strike rears the body up around the root, so the talons lead the
+    // way in and the wings brake behind them; the root's own pitch is the
+    // flight's.
+    body.rotation.x = -attack * 0.5;
+
     jaw.rotation.x = bite * 0.65;
-    head.rotation.x = -dive * 0.15 + bite * 0.08;
+    head.rotation.x = -dive * 0.15 + bite * 0.08 + attack * 0.35;
 
     tail.rotation.y = Math.sin(phase * 0.3) * 0.16;
 

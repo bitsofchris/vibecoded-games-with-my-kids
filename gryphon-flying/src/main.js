@@ -2441,10 +2441,18 @@ bird.add(gryphon.root);
 // in a dive. `attack` and `bite` are driven by the strike, once there is one.
 const gryphonPose = { flap: 0.6, dive: 0, attack: 0, bite: 0, grounded: 0 };
 function animateGryphon(dt, flapping) {
-  const flapTarget = flapping ? 0.85 : 0.12;
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
+  const fast = clamp01((state.speed - SPEED) / 22); // above cruise: wings tuck, no flapping
+  const slow = clamp01((SPEED - state.speed) / 12); // below cruise: a flare, and hard beats
+  // beats: hard in a steep climb, steady in a shallow one, none in a fast dive
+  const flapTarget = flapping ? 0.8 + 0.2 * clamp01(state.vy / 14) : 0.12 * (1 - fast);
   gryphonPose.flap += (flapTarget - gryphonPose.flap) * Math.min(1, dt * 3);
-  const diveTarget = Math.max(0, Math.min(1, -state.pitch * 2.2));
+  // wings sweep back with the nose down and with speed
+  const diveTarget = clamp01(Math.max(0, -state.pitch) * 2.2 + fast * 0.7);
   gryphonPose.dive += (diveTarget - gryphonPose.dive) * Math.min(1, dt * 2.5);
+  // the flare: nose up and slowing, wings raised and cupped, legs coming down
+  const flareTarget = 0.45 * clamp01((state.pitch - 0.25) * 2.5) * clamp01(0.35 + slow);
+  gryphonPose.grounded += (flareTarget - gryphonPose.grounded) * Math.min(1, dt * 4);
   gryphonPose.attack = hunt?.pose.attack ?? 0;
   gryphonPose.bite = hunt?.pose.bite ?? 0;
   // the sound's wing beats read the kit's phase; keep it moving at the gryphon's own rate
@@ -2630,6 +2638,7 @@ const state = {
   z: 0,
   heading: 0,
   vy: 0,
+  speed: SPEED, // Gryphon Flying: airspeed, m/s; gathers in a dive, bleeds off in a climb
   bank: 0,
   pitch: 0,
   yawRate: 0,
@@ -2981,8 +2990,12 @@ function updateFlight(dt) {
   // move
   const fx = Math.sin(state.heading),
     fz = Math.cos(state.heading);
-  state.x += fx * SPEED * dt;
-  state.z += fz * SPEED * dt;
+  // Gryphon Flying: a dive gathers speed and a climb sheds it, around the
+  // flight's cruise; the look-aheads and the aim keep reading the cruise speed.
+  const speedTarget = SPEED + Math.max(-14, Math.min(22, -state.vy * 0.8));
+  state.speed += (speedTarget - state.speed) * Math.min(1, dt * 1.4);
+  state.x += fx * state.speed * dt;
+  state.z += fz * state.speed * dt;
   state.y += state.vy * dt;
   state.y = Math.max(state.y, obstacleFloor(state.x, state.z) + 8 + birdBelow());
   // pose: roll leads yaw, pitch follows climb
@@ -4269,6 +4282,7 @@ window.__fly = {
   get hunt() {
     return hunt;
   },
+  gryphonPose,
   cam,
   perf,
   trace,

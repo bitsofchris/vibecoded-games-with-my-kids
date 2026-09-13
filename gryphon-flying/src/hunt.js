@@ -285,6 +285,7 @@ export function createHunt(deps) {
     state.y = y;
     state.z = z;
     state.vy = dt > 0 ? (y - y0) / dt : 0;
+    state.speed = swoop.speed; // so the flight takes the gryphon back at the speed it is going
     state.heading = heading;
     state.pitch += (pitch - state.pitch) * Math.min(1, dt * 5);
     state.bank += (-clamp(turnRate, -1.4, 1.4) * 1.1 - state.bank) * Math.min(1, dt * 3);

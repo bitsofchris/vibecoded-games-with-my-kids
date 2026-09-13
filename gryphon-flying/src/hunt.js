@@ -19,6 +19,7 @@ const MAX_LIVE = 10;
 const CLEARING = 28; // meters of open ground around a robot
 const TARGET = { near: 70, far: 540, cone: Math.cos(0.75), keepCone: Math.cos(1.1), keepFar: 640 };
 const SWOOP = {
+  range: 260, // meters: the ring turns red and SWOOP arms inside this
   speed: 64, // m/s along the dive, against a 40 m/s cruise
   pullSpeed: 46, // m/s the pull-up eases down to before the hand-back
   strikeAt: 45, // meters from the robot at which the talons come out
@@ -29,7 +30,6 @@ const SWOOP = {
 };
 const CELEBRATE_EVERY = 5;
 const HIT = { stopMs: 200, stopScale: 0.18, shakeMs: 380, shakeAmp: 1.8, sparks: 26, ringSeconds: 0.5 };
-const POW = ['POW!', 'BAM!', 'CRUNCH!', 'ZAP!', 'WHAM!'];
 
 const wrap = (a) => a - Math.round(a / (Math.PI * 2)) * Math.PI * 2;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -177,6 +177,7 @@ export function createHunt(deps) {
     }
     setTarget(best);
   }
+  const inRange = (r) => !!r && Math.hypot(r.x - state.x, r.z - state.z) <= SWOOP.range;
   function setTarget(r) {
     if (r === target) return;
     if (target) target.robot.setTargeted(false);
@@ -275,19 +276,6 @@ export function createHunt(deps) {
       r.mesh.scale.set(grow, grow, 1 - k * 0.8);
     }
   }
-  function pow(x, y, z) {
-    _v.set(x, y, z).project(camera);
-    if (_v.z > 1 || _v.z < -1) return;
-    const sx = (_v.x * 0.5 + 0.5) * window.innerWidth,
-      sy = (-_v.y * 0.5 + 0.5) * window.innerHeight;
-    ui.pow.textContent = POW[Math.floor(Math.random() * POW.length)];
-    ui.pow.style.setProperty('--x', sx.toFixed(0) + 'px');
-    ui.pow.style.setProperty('--y', sy.toFixed(0) + 'px');
-    ui.pow.style.setProperty('--tilt', ((Math.random() - 0.5) * 30).toFixed(0) + 'deg');
-    ui.pow.classList.remove('on');
-    void ui.pow.offsetWidth;
-    ui.pow.classList.add('on');
-  }
 
   // Lift an arc's control point until every sample clears what it crosses,
   // except the last stretch into the robot, which is its clearing.
@@ -306,7 +294,7 @@ export function createHunt(deps) {
     return arc;
   }
   function startAttack() {
-    if (swoop.phase !== 'flying' || !target || !canHunt()) return false;
+    if (swoop.phase !== 'flying' || !target || !inRange(target) || !canHunt()) return false;
     const r = target;
     const p0 = [state.x, state.y, state.z],
       p1 = [r.x, r.y + r.height * 0.55, r.z];
@@ -403,7 +391,6 @@ export function createHunt(deps) {
         if (!r.robot.destroyed) r.robot.hit();
         setTarget(null);
         burst(r.x, r.y + r.height * 0.55, r.z);
-        pow(r.x, r.y + r.height * 0.9, r.z);
         land(true);
         startPullUp(r);
       }
@@ -426,7 +413,6 @@ export function createHunt(deps) {
       <div id="huntScore" aria-live="polite" title="Robots broken">🤖 <span id="huntCount">0</span></div>
       <div id="huntReticle" aria-hidden="true"><span>🤖</span></div>
       <button id="huntAttack" type="button" aria-label="Swoop and strike the robot">💥<small>SWOOP</small></button>
-      <div id="huntPow" aria-hidden="true"></div>
       <div id="huntCheer" aria-hidden="true"></div>`;
     document.body.appendChild(root);
     const attackBtn = root.querySelector('#huntAttack');
@@ -446,7 +432,6 @@ export function createHunt(deps) {
       reticle: root.querySelector('#huntReticle'),
       score: root.querySelector('#huntCount'),
       cheer: root.querySelector('#huntCheer'),
-      pow: root.querySelector('#huntPow'),
     };
   }
   const _v = new THREE.Vector3();
@@ -454,7 +439,8 @@ export function createHunt(deps) {
     const shown = canHunt();
     ui.root.classList.toggle('on', shown);
     const r = swoop.phase === 'diving' || swoop.phase === 'striking' ? swoop.target : target;
-    ui.attackBtn.disabled = !(shown && target && swoop.phase === 'flying');
+    const armed = shown && swoop.phase === 'flying' && inRange(target);
+    ui.attackBtn.disabled = !armed;
     if (!shown || !r) {
       ui.reticle.classList.remove('on');
       return;
@@ -466,6 +452,7 @@ export function createHunt(deps) {
     const x = (_v.x * 0.5 + 0.5) * window.innerWidth,
       y = (-_v.y * 0.5 + 0.5) * window.innerHeight;
     ui.reticle.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px) translate(-50%, -50%)`;
+    ui.reticle.classList.toggle('ready', armed);
     ui.reticle.classList.toggle('locked', swoop.phase !== 'flying');
   }
   let cheerTimer = 0;
@@ -544,6 +531,9 @@ export function createHunt(deps) {
     },
     get target() {
       return target;
+    },
+    get armed() {
+      return swoop.phase === 'flying' && inRange(target);
     },
     get score() {
       return score;

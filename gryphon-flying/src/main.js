@@ -3212,6 +3212,9 @@ function updateCamera(dt) {
   cam.lift += (lift - cam.lift) * Math.min(1, dt * (lift > cam.lift ? (hunt?.driving ? 3.5 : 10) : 1.5));
   want.y = Math.max(want.y + cam.lift, floor + 7);
   camera.position.copy(want);
+  // Gryphon Flying: a strike shakes the view for a moment
+  const shake = hunt?.shake ?? 0;
+  if (shake > 0) camera.position.x += (Math.random() - 0.5) * shake, (camera.position.y += (Math.random() - 0.5) * shake), (camera.position.z += (Math.random() - 0.5) * shake);
   // A kind may move where the camera looks, so a long neck sits in frame; the
   // camera's place, and so the orbit's pivot, stays on the bird.
   const look = bird.userData.kind.look,
@@ -3313,6 +3316,13 @@ const audio = (() => {
   function start() {
     if (started) return;
     started = true;
+    // Gryphon Flying: iOS routes plain Web Audio through the "ambient" session,
+    // which the ringer switch mutes; "playback" is audible with the ringer off.
+    try {
+      if (navigator.audioSession) navigator.audioSession.type = 'playback';
+    } catch {
+      // not supported: nothing to do
+    }
     const Audio = window.AudioContext || window.webkitAudioContext;
     if (!Audio) {
       document.getElementById('muteBtn').textContent = 'sound unavailable';
@@ -3327,6 +3337,16 @@ const audio = (() => {
       return;
     }
     ctx.resume().catch(() => {});
+    // Gryphon Flying: on iOS a one-sample silent buffer played inside the
+    // gesture is what actually unlocks output.
+    try {
+      const unlock = ctx.createBufferSource();
+      unlock.buffer = ctx.createBuffer(1, 1, 22050);
+      unlock.connect(ctx.destination);
+      unlock.start(0);
+    } catch {
+      // ignore
+    }
     master = ctx.createGain();
     master.gain.value = 0;
     master.connect(ctx.destination);
@@ -3468,6 +3488,42 @@ const audio = (() => {
       }
       clank.disconnect();
     };
+    // the thump: a sine dropping through the bass, felt more than heard
+    const thump = ctx.createOscillator(),
+      tg = ctx.createGain();
+    thump.type = 'sine';
+    thump.frequency.setValueAtTime(150, t);
+    thump.frequency.exponentialRampToValueAtTime(36, t + 0.28);
+    tg.gain.setValueAtTime(0.0001, t);
+    tg.gain.exponentialRampToValueAtTime(0.9, t + 0.015);
+    tg.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+    thump.connect(tg).connect(master);
+    thump.start(t);
+    thump.stop(t + 0.5);
+    thump.onended = () => {
+      thump.disconnect();
+      tg.disconnect();
+    };
+    // the robot's last words: three falling blips
+    [880, 520, 260].forEach((f, i) => {
+      const at = t + 0.12 + i * 0.11;
+      const o = ctx.createOscillator(),
+        g = ctx.createGain();
+      o.type = 'square';
+      o.frequency.setValueAtTime(f, at);
+      o.frequency.exponentialRampToValueAtTime(f * 0.7, at + 0.1);
+      g.gain.setValueAtTime(0.0001, at);
+      g.gain.exponentialRampToValueAtTime(0.09, at + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, at + 0.12);
+      o.connect(g).connect(master);
+      g.connect(delay);
+      o.start(at);
+      o.stop(at + 0.15);
+      o.onended = () => {
+        o.disconnect();
+        g.disconnect();
+      };
+    });
   }
   function cheer() {
     if (!ctx) return;
@@ -3544,6 +3600,12 @@ const audio = (() => {
     if (!ctx || ctx.state === 'closed') return;
     ctx[s ? 'suspend' : 'resume']().catch(() => {});
   }
+  // Gryphon Flying: iOS quietly suspends or interrupts a context (a call, the
+  // lock screen, a tab switch); the next touch or key wakes it while flying.
+  function wake() {
+    if (!ctx || ctx.state === 'closed' || ctx.state === 'running') return;
+    if (running && !paused && !document.hidden) ctx.resume().catch(() => {});
+  }
   function dispose() {
     return ctx && ctx.state !== 'closed' ? ctx.close().catch(() => {}) : Promise.resolve();
   }
@@ -3553,6 +3615,7 @@ const audio = (() => {
     flap,
     strike,
     cheer,
+    wake,
     update,
     toggleMute,
     setVolume,
@@ -4061,7 +4124,7 @@ function frame(now) {
   if (primed && running && !paused) perf.frameMs += (interval - perf.frameMs) * 0.05;
   const t0 = performance.now();
   if (running && !paused) {
-    advance(dt);
+    advance(dt * (hunt?.timeScale ?? 1)); // Gryphon Flying: a strike stops time for a beat
     audio.update(dt);
   } else if (!running) {
     // One still, lit frame behind Begin. No idle GPU loop.
@@ -4175,6 +4238,8 @@ function togglePause() {
   syncPlayback();
 }
 document.getElementById('pauseBtn').addEventListener('click', togglePause);
+for (const evt of ['pointerdown', 'touchend', 'keydown'])
+  document.addEventListener(evt, () => audio.wake(), { capture: true, passive: true });
 document.addEventListener('visibilitychange', () => {
   syncPlayback();
   if (!document.hidden && !primed) renderer.setAnimationLoop(frame);
@@ -4271,6 +4336,7 @@ hunt = createHunt({
   seed,
   materialFactory: gryphonMaterial,
   camera,
+  renderer,
   releaseSunward,
   playerSteering: () => held.size > 0 || state.dragButton === 2,
   canHunt: () => running && !paused && !disposed && !intro.beat,

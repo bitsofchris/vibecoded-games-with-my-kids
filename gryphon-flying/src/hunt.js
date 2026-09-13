@@ -28,6 +28,8 @@ const SWOOP = {
   clearance: 8, // meters the arcs keep over anything they cross
 };
 const CELEBRATE_EVERY = 5;
+const HIT = { stopMs: 200, stopScale: 0.18, shakeMs: 380, shakeAmp: 1.8, sparks: 26, ringSeconds: 0.5 };
+const POW = ['POW!', 'BAM!', 'CRUNCH!', 'ZAP!', 'WHAM!'];
 
 const wrap = (a) => a - Math.round(a / (Math.PI * 2)) * Math.PI * 2;
 const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
@@ -82,6 +84,7 @@ export function createHunt(deps) {
     seed,
     materialFactory,
     camera,
+    renderer, // to compile the strike's materials before the first strike
     releaseSunward,
     playerSteering, // () => boolean: the player is holding a steering key or drag
     canHunt, // () => boolean: false while the opening plays or the page is not running
@@ -186,6 +189,105 @@ export function createHunt(deps) {
   const swoop = { phase: 'flying', target: null, arc: null, s: 0, speed: 0, hit: false, startY: 0 };
   const pose = { attack: 0, bite: 0 };
   let score = 0;
+
+  // --- the strike's effects ------------------------------------------------
+  // A hit-stop and a shake read from the wall clock, so the slowed simulation
+  // cannot stretch them; the burst and the ring run on simulation time, so the
+  // slow-motion beat shows them hanging in the air.
+  const fx = { sparks: [], rings: [], stopUntil: 0, shakeUntil: 0 };
+  const sparkGeometry = new THREE.BoxGeometry(1, 1, 1);
+  const ringGeometry = new THREE.TorusGeometry(1, 0.14, 6, 28);
+  const fxMaterials = [materialFactory(0xdfb15f), materialFactory(0x384650), materialFactory(0xfff0a8), materialFactory(0x6faaa7)];
+  // Compile the burst's shaders now, off the critical path, so the first strike
+  // does not stall for a third of a second while the renderer builds them.
+  {
+    const warm = new THREE.Group();
+    for (const material of fxMaterials) warm.add(new THREE.Mesh(sparkGeometry, material));
+    warm.add(new THREE.Mesh(ringGeometry, fxMaterials[2]));
+    renderer?.compileAsync?.(warm, camera, scene).catch(() => {});
+  }
+  function burst(x, y, z) {
+    fx.stopUntil = performance.now() + HIT.stopMs;
+    fx.shakeUntil = performance.now() + HIT.shakeMs;
+    for (let i = 0; i < HIT.sparks; i++) {
+      const mesh = new THREE.Mesh(sparkGeometry, fxMaterials[i % fxMaterials.length]);
+      const size = 0.35 + Math.random() * 0.8;
+      mesh.scale.setScalar(size);
+      mesh.position.set(x, y, z);
+      mesh.castShadow = true;
+      const a = Math.random() * Math.PI * 2,
+        up = Math.random(),
+        speed = 9 + Math.random() * 16;
+      scene.add(mesh);
+      fx.sparks.push({
+        mesh,
+        size,
+        life: 1.1 + Math.random() * 0.4,
+        age: 0,
+        vx: Math.cos(a) * speed * (1 - up * 0.5),
+        vy: 6 + up * 18,
+        vz: Math.sin(a) * speed * (1 - up * 0.5),
+        sx: (Math.random() - 0.5) * 14,
+        sz: (Math.random() - 0.5) * 14,
+      });
+    }
+    const ring = new THREE.Mesh(ringGeometry, fxMaterials[2]);
+    ring.rotation.x = Math.PI / 2;
+    ring.position.set(x, y - 1, z);
+    scene.add(ring);
+    fx.rings.push({ mesh: ring, age: 0 });
+  }
+  function updateFx(dt) {
+    for (let i = fx.sparks.length - 1; i >= 0; i--) {
+      const p = fx.sparks[i];
+      p.age += dt;
+      if (p.age >= p.life) {
+        scene.remove(p.mesh);
+        fx.sparks.splice(i, 1);
+        continue;
+      }
+      p.vy -= 24 * dt;
+      p.mesh.position.x += p.vx * dt;
+      p.mesh.position.y += p.vy * dt;
+      p.mesh.position.z += p.vz * dt;
+      p.mesh.rotation.x += p.sx * dt;
+      p.mesh.rotation.z += p.sz * dt;
+      const ground = heightAt(p.mesh.position.x, p.mesh.position.z) + p.size * 0.5;
+      if (p.mesh.position.y < ground) {
+        p.mesh.position.y = ground;
+        p.vy = Math.abs(p.vy) * 0.35;
+        p.vx *= 0.7;
+        p.vz *= 0.7;
+      }
+      const fade = 1 - Math.max(0, (p.age - p.life * 0.55) / (p.life * 0.45));
+      p.mesh.scale.setScalar(p.size * fade);
+    }
+    for (let i = fx.rings.length - 1; i >= 0; i--) {
+      const r = fx.rings[i];
+      r.age += dt;
+      const k = r.age / HIT.ringSeconds;
+      if (k >= 1) {
+        scene.remove(r.mesh);
+        fx.rings.splice(i, 1);
+        continue;
+      }
+      const grow = 1 + 16 * (1 - (1 - k) * (1 - k));
+      r.mesh.scale.set(grow, grow, 1 - k * 0.8);
+    }
+  }
+  function pow(x, y, z) {
+    _v.set(x, y, z).project(camera);
+    if (_v.z > 1 || _v.z < -1) return;
+    const sx = (_v.x * 0.5 + 0.5) * window.innerWidth,
+      sy = (-_v.y * 0.5 + 0.5) * window.innerHeight;
+    ui.pow.textContent = POW[Math.floor(Math.random() * POW.length)];
+    ui.pow.style.setProperty('--x', sx.toFixed(0) + 'px');
+    ui.pow.style.setProperty('--y', sy.toFixed(0) + 'px');
+    ui.pow.style.setProperty('--tilt', ((Math.random() - 0.5) * 30).toFixed(0) + 'deg');
+    ui.pow.classList.remove('on');
+    void ui.pow.offsetWidth;
+    ui.pow.classList.add('on');
+  }
 
   // Lift an arc's control point until every sample clears what it crosses,
   // except the last stretch into the robot, which is its clearing.
@@ -300,6 +402,8 @@ export function createHunt(deps) {
         swoop.hit = true;
         if (!r.robot.destroyed) r.robot.hit();
         setTarget(null);
+        burst(r.x, r.y + r.height * 0.55, r.z);
+        pow(r.x, r.y + r.height * 0.9, r.z);
         land(true);
         startPullUp(r);
       }
@@ -322,6 +426,7 @@ export function createHunt(deps) {
       <div id="huntScore" aria-live="polite" title="Robots broken">🤖 <span id="huntCount">0</span></div>
       <div id="huntReticle" aria-hidden="true"><span>🤖</span></div>
       <button id="huntAttack" type="button" aria-label="Swoop and strike the robot">💥<small>SWOOP</small></button>
+      <div id="huntPow" aria-hidden="true"></div>
       <div id="huntCheer" aria-hidden="true"></div>`;
     document.body.appendChild(root);
     const attackBtn = root.querySelector('#huntAttack');
@@ -341,6 +446,7 @@ export function createHunt(deps) {
       reticle: root.querySelector('#huntReticle'),
       score: root.querySelector('#huntCount'),
       cheer: root.querySelector('#huntCheer'),
+      pow: root.querySelector('#huntPow'),
     };
   }
   const _v = new THREE.Vector3();
@@ -386,6 +492,7 @@ export function createHunt(deps) {
       }
     }
     if (cheerTimer > 0 && (cheerTimer -= dt) <= 0) ui.cheer.classList.remove('on');
+    updateFx(dt);
     scanTimer -= dt;
     if (scanTimer <= 0) {
       scanTimer = 0.5;
@@ -404,6 +511,11 @@ export function createHunt(deps) {
   function dispose() {
     for (const r of live.values()) r.robot.dispose();
     live.clear();
+    for (const p of fx.sparks) scene.remove(p.mesh);
+    for (const r of fx.rings) scene.remove(r.mesh);
+    fx.sparks.length = fx.rings.length = 0;
+    sparkGeometry.dispose();
+    ringGeometry.dispose();
     ui.root.remove();
   }
 
@@ -416,6 +528,16 @@ export function createHunt(deps) {
     pose,
     get driving() {
       return swoop.phase !== 'flying';
+    },
+    get timeScale() {
+      return performance.now() < fx.stopUntil ? HIT.stopScale : 1;
+    },
+    get shake() {
+      const left = fx.shakeUntil - performance.now();
+      return left > 0 ? (HIT.shakeAmp * left) / HIT.shakeMs : 0;
+    },
+    get effects() {
+      return { sparks: fx.sparks.length, rings: fx.rings.length };
     },
     get phase() {
       return swoop.phase;

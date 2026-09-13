@@ -681,6 +681,42 @@
           transform: scale(1);
         }
       }
+      #huntPow {
+        position: fixed;
+        left: var(--x, 50%);
+        top: var(--y, 50%);
+        transform: translate(-50%, -50%) rotate(var(--tilt, 0deg)) scale(0.2);
+        font-size: clamp(2.4rem, 8vw, 5rem);
+        font-weight: 900;
+        letter-spacing: 0.04em;
+        color: #fff4c2;
+        -webkit-text-stroke: 2px #b8320f;
+        text-shadow:
+          0 4px 0 #e8531f,
+          0 8px 22px rgba(8, 18, 26, 0.5);
+        opacity: 0;
+        pointer-events: none;
+        z-index: 4;
+      }
+      #huntPow.on {
+        animation: huntPow 0.8s cubic-bezier(0.2, 1.4, 0.4, 1) forwards;
+      }
+      @keyframes huntPow {
+        15% {
+          opacity: 1;
+          transform: translate(-50%, -50%) rotate(var(--tilt, 0deg)) scale(1.25);
+        }
+        30% {
+          transform: translate(-50%, -50%) rotate(var(--tilt, 0deg)) scale(1);
+        }
+        70% {
+          opacity: 1;
+        }
+        100% {
+          opacity: 0;
+          transform: translate(-50%, -62%) rotate(var(--tilt, 0deg)) scale(1.05);
+        }
+      }
       @media (max-width: 640px) {
         #huntAttack {
           width: 88px;

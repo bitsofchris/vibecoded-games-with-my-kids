@@ -164,20 +164,7 @@
   }
   .chip.on { background: var(--gold); color: var(--ink); }
 
-  .grownup {
-    align-self: center;
-    position: relative; overflow: hidden;
-    background: rgba(0,0,0,.22); color: #fff;
-    border-radius: 999px; min-height: 48px; padding: 8px 20px;
-    font-size: 1rem;
-    -webkit-touch-callout: none;
-  }
-  .grownup .fill {
-    position: absolute; left: 0; top: 0; bottom: 0; width: 0;
-    background: rgba(255,194,61,.55);
-  }
-  .grownup.hold .fill { width: 100%; transition: width 1.2s linear; }
-  .grownup span { position: relative; }
+  .editbtn { align-self: center; min-height: 52px; font-size: 1.15rem; }
 
   /* ── PLAY ── */
   #play { padding: 12px 16px 16px; }
@@ -408,6 +395,10 @@
   .wordchips { display: flex; flex-wrap: wrap; gap: 6px; }
   .wordchips span { background: #fff; border-radius: 10px; padding: 4px 10px; font-weight: 700; }
   .scrollx { overflow-x: auto; }
+  .sents { display: flex; flex-direction: column; gap: 6px; }
+  .sents div { background: #fff; border-radius: 10px; padding: 6px 10px; font-size: 1rem; }
+  .sents b { margin-right: 6px; }
+  .sents i { color: var(--soft); }
 
   @media (max-width: 480px) {
     .modes { gap: 8px; }
@@ -464,7 +455,7 @@
       <button class="chip" data-n="8">8</button>
       <button class="chip" data-n="10">10</button>
     </div>
-    <button class="grownup" id="grownBtn"><div class="fill"></div><span>👪 Grown-ups: press &amp; hold</span></button>
+    <button class="btn ghost editbtn" id="editBtn">📝 Spelling words &amp; progress</button>
   </div>
 </section>
 
@@ -502,9 +493,9 @@
 <!-- ═══ PARENT ═══ -->
 <section id="parent" class="screen">
   <div class="home-wrap">
-    <div class="ptitle"><span>👪 Grown-ups</span><button class="btn" id="parentDone">✓ Done</button></div>
+    <div class="ptitle"><span>📝 Spelling words</span><button class="btn" id="parentDone">✓ Done</button></div>
     <div class="tabs">
-      <button class="tab on" data-tab="words">📝 Word lists</button>
+      <button class="tab on" data-tab="words">📝 Words</button>
       <button class="tab" data-tab="report">📊 Progress</button>
     </div>
 
@@ -524,16 +515,19 @@
         <label for="listText">Words (one per line)</label>
         <textarea id="listText" spellcheck="false" autocapitalize="off" autocorrect="off" placeholder="there: Put the box over there.&#10;friend&#10;because"></textarea>
         <div class="help">
-          One word per line. Add an example sentence after a colon — great for sound-alikes:
-          <code>their: The kids rode their bikes.</code><br>
-          Optional: put a tricky part in (parentheses) to highlight it: <code>fr(ie)nd</code>.
-          Common patterns (vowel teams, ck, sh, double letters, magic e, -ing…) are highlighted automatically.
+          Just type the words, one per line. Example sentences are added for you automatically
+          (see below after saving). Want your own? Add it after a colon: <code>their: The kids rode their bikes.</code><br>
+          Optional: put a tricky part in (parentheses) to highlight it: <code>p(eo)ple</code>.
         </div>
       </div>
       <div class="row" style="justify-content:flex-start;">
         <button class="btn mint" id="saveList">💾 Save list</button>
         <button class="btn" id="hearList">🔊 Test voice</button>
         <button class="btn coral" id="delList">🗑 Delete list</button>
+      </div>
+      <div class="field">
+        <label>Sentences she'll hear</label>
+        <div class="sents" id="sentPreview"></div>
       </div>
       <div class="field">
         <label>Backup &amp; other devices</label>
@@ -582,6 +576,7 @@
 <div id="confetti"></div>
 <div id="toast"></div>
 
+<script src="sentences.js"></script>
 <script>
 (() => {
 'use strict';
@@ -592,23 +587,15 @@
 const KEY = 'spellquest.v1';
 const TRAIL_LEN = 40;
 const LOOT = ['💎', '👑', '🏆', '🐚', '🗝️', '🪙', '🦄', '🌈', '🐉', '🚀', '🦋', '🍀'];
-const SAMPLE_TEXT = [
-  'there: Put the box over there.',
-  'their: The kids rode their bikes.',
-  "they're: They're going to the park.",
-  'because: I smiled because I was happy.',
-  'friend: My friend sits next to me.',
-  'said: Mom said it was time for bed.',
-  'p(eo)ple: Lots of people came to the show.',
-  "again: Let's play that game again!",
-  'could: I could see the moon.',
-  'would: Would you like a snack?',
-  'through: We walked through the woods.',
-  'thought: I thought the joke was funny.',
-  'enough: Do we have enough cookies?',
-  'school: We read books at school.',
-  'laugh: The puppy made me laugh.',
-].join('\n');
+const SAMPLE_TEXT = ['there', 'their', "they're", 'because', 'friend', 'said', 'p(eo)ple', 'again',
+  'could', 'would', 'through', 'thought', 'enough', 'school', 'laugh'].join('\n');
+
+// built-in sentence bank (sentences.js), keyed by lowercase word
+const BANK = new Map();
+(window.SQ_SENTENCES || '').trim().split('\n').forEach(l => {
+  const k = l.indexOf('|');
+  if (k > 0) BANK.set(l.slice(0, k).trim().toLowerCase(), l.slice(k + 1).trim());
+});
 
 // sound-alike words: in Spell mode their sentence is read automatically
 const HOMOPHONES = new Set(("there their they're to too two your you're its it's hear here know no " +
@@ -622,7 +609,7 @@ const newMode = () => ({ ok: 0, help: 0, miss: 0, streak: 0, review: false, help
 function defaults() {
   const id = uid();
   return { v: 1, lists: [{ id, name: 'Sample words', text: SAMPLE_TEXT }], active: id,
-    stats: {}, stars: 0, trail: 0, treasures: [], roundSize: 8, rounds: 0 };
+    stats: {}, sentCache: {}, stars: 0, trail: 0, treasures: [], roundSize: 8, rounds: 0 };
 }
 function load() {
   try {
@@ -669,7 +656,12 @@ function parseList(text) {
     const key = clean.toLowerCase();
     if (seen.has(key)) continue;
     seen.add(key);
-    out.push({ word: clean, key, sentence, marks });
+    let auto = '';
+    if (!sentence) {
+      sentence = BANK.get(key) || (S.sentCache && S.sentCache[key]) || '';
+      if (sentence) auto = BANK.has(key) ? 'bank' : 'dict';
+    }
+    out.push({ word: clean, key, sentence, marks, auto });
   }
   return out;
 }
@@ -920,7 +912,7 @@ function renderHome() {
   const list = activeList(), n = words().length;
   $('listLine').innerHTML = n
     ? `This week: <b>${esc(list.name)}</b> · ${n} words`
-    : 'No words yet — ask a grown-up to add some! 👪';
+    : 'No words yet — tap 📝 Spelling words below to add some!';
   document.querySelectorAll('#sizes .chip').forEach(c => c.classList.toggle('on', +c.dataset.n === S.roundSize));
   show('home');
 }
@@ -962,7 +954,7 @@ function priority(w, mode) {
 function startRound(mode, only) {
   hush(); clearTimers();
   let pool = words();
-  if (!pool.length) { toast('Ask a grown-up to add spelling words first! 👪'); return; }
+  if (!pool.length) { toast('Add some spelling words first! 📝'); return; }
   if (only && only.length) pool = pool.filter(w => only.includes(w.key));
   const n = Math.min(S.roundSize, pool.length);
   const chosen = pool.map(w => ({ w, p: priority(w, mode) })).sort((a, b) => b.p - a.p).slice(0, n).map(x => x.w);
@@ -1392,6 +1384,8 @@ function renderParent() {
   $('listName').value = l.name;
   $('listText').value = l.text;
   $('linkOut').style.display = 'none';
+  renderSentPreview();
+  fillSentences();
   renderReport();
   show('parent');
 }
@@ -1401,8 +1395,55 @@ function saveListEdits(quiet) {
   l.text = $('listText').value;
   save();
   if (!quiet) toast(`Saved “${l.name}” · ${parseList(l.text).length} words ✓`);
+  renderSentPreview();
+  fillSentences();
   $('listSel').querySelector(`option[value="${l.id}"]`).textContent = l.name;
 }
+// example sentences for words not in the bank: free dictionary lookup, short + kid-safe only
+const BAD_WORDS = /\b(kill\w*|die[ds]?|dying|dead|death|blood\w*|guns?|shoot\w*|shot|sex\w*|drunk|beer|wine|drugs?|hell|damn\w*|naked|murder\w*|hate\w*|stupid|suicide|bombs?|weapons?|prison|steal\w*)\b/i;
+function pickExample(word, examples) {
+  const re = new RegExp('(^|[^a-z\'])' + word.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '(?![a-z\'])', 'i');
+  const ok = examples.map(e => String(e).trim()).filter(e => {
+    const n = e.split(/\s+/).length;
+    return n >= 4 && n <= 14 && re.test(e) && !BAD_WORDS.test(e) && !/[;:()\[\]"“”]/.test(e);
+  }).sort((a, b) => a.length - b.length);
+  if (!ok.length) return '';
+  let e = ok[0];
+  e = e[0].toUpperCase() + e.slice(1);
+  if (!/[.!?]$/.test(e)) e += '.';
+  return e;
+}
+async function lookupSentence(word) {
+  const ctl = new AbortController();
+  const t = setTimeout(() => ctl.abort(), 6000);
+  try {
+    const r = await fetch('https://api.dictionaryapi.dev/api/v2/entries/en/' + encodeURIComponent(word.toLowerCase()), { signal: ctl.signal });
+    if (r.status === 404) return '';
+    if (!r.ok) return null;          // try again another time
+    const data = await r.json();
+    const ex = [];
+    (Array.isArray(data) ? data : []).forEach(en => (en.meanings || []).forEach(m => (m.definitions || []).forEach(d => d.example && ex.push(d.example))));
+    return pickExample(word, ex);
+  } catch (e) { return null; }
+  finally { clearTimeout(t); }
+}
+async function fillSentences() {
+  if (!S.sentCache) S.sentCache = {};
+  const need = parseList(activeList().text).filter(w => !w.sentence && !(w.key in S.sentCache));
+  if (!need.length) return;
+  $('sentPreview').insertAdjacentHTML('afterbegin', '<div id="sentLoading"><i>Finding sentences…</i></div>');
+  const got = await Promise.all(need.map(w => lookupSentence(w.word)));
+  need.forEach((w, i) => { if (got[i] !== null) S.sentCache[w.key] = got[i]; });
+  save();
+  renderSentPreview();
+}
+function renderSentPreview() {
+  const ws = parseList(activeList().text);
+  $('sentPreview').innerHTML = ws.length ? ws.map(w => `<div><b>${esc(w.word)}</b>${w.sentence
+    ? esc(w.sentence) : '<i>no sentence — that’s OK, she’ll just hear the word</i>'}</div>`).join('')
+    : '<div><i>Add words above, then tap Save.</i></div>';
+}
+
 function switchTab(t) {
   document.querySelectorAll('.tab').forEach(b => b.classList.toggle('on', b.dataset.tab === t));
   $('tab-words').style.display = t === 'words' ? 'flex' : 'none';
@@ -1499,19 +1540,7 @@ document.querySelectorAll('#sizes .chip').forEach(b => b.addEventListener('click
   S.roundSize = +b.dataset.n; save(); sfx.tap(); renderHome();
 }));
 
-// grown-up gate: press and hold
-(() => {
-  const b = $('grownBtn');
-  let t = null;
-  const cancel = () => { clearTimeout(t); t = null; b.classList.remove('hold'); };
-  b.addEventListener('pointerdown', e => {
-    e.preventDefault();
-    b.classList.add('hold');
-    t = setTimeout(() => { cancel(); sfx.tap(); renderParent(); }, 1200);
-  }, { passive: false });
-  ['pointerup', 'pointerleave', 'pointercancel'].forEach(ev => b.addEventListener(ev, cancel));
-  b.addEventListener('contextmenu', e => e.preventDefault());
-})();
+$('editBtn').addEventListener('click', () => { sfx.tap(); renderParent(); });
 
 // stage actions (event delegation)
 $('stage').addEventListener('click', e => {

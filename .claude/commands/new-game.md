@@ -126,11 +126,10 @@ https://sophiaethan.com. No build step, no workflow.
 ```bash
 git add -A && git commit -m "Add <Game Title>" && git push origin main
 gh api repos/bitsofchris/vibecoded-games-with-my-kids/pages/builds/latest   # expect "status": "built"
-curl -sI http://sophiaethan.com/<slug>/ | head -1                           # expect 200
+curl -sI https://sophiaethan.com/<slug>/ | head -1                          # expect 200
 ```
 
-Report back the live `http://sophiaethan.com/<slug>/` link. The site is
-HTTP-only — see the HTTPS note in `AGENTS.md`.
+Report back the live `https://sophiaethan.com/<slug>/` link.
 
 ---
 

@@ -23,7 +23,7 @@ the reason Phase 1 ships the baseline before any gameplay work.
 
 ## 2. Constraints that shape the plan
 
-- **Live site is HTTP-only**, so it will always take the WebGL2 path (WebGPU needs a secure context). WebGL2 works fine. Fixing HTTPS in repo Settings → Pages is worth doing in parallel (iPadOS 26 has WebGPU) but is not a blocker.
+- **Live site is now HTTPS**, so it is a secure context and WebGPU is available where the browser supports it (iPadOS 26 has WebGPU). Keep the WebGL2 fallback for older devices.
 - **Repo rule: no build step.** We serve `src/` and `library/` directly. Upstream's `tools/`, `tests/`, `.github/`, `dist/` are not vendored. HANDOFF step 6's "verify the bundle" is dropped.
 - **Three.js r185.1 from jsDelivr**, pinned by exact version in the import map. Our AGENTS.md names cdnjs, but cdnjs does not carry the `three.webgpu.js` / `three.tsl.js` module builds this engine needs. jsDelivr at a pinned version is the same supply-chain posture.
 - **Engine is one 4,192-line file**, `src/main.js`. Relevant anchors: `state` (2582), `updateFlight` (2804), `terrainAhead` (2663), `climbAhead` (2694), `updateSunward` (2508), `updateNightward` (2541), `updateIntro` (2739), `obstacleFloor` (3042), `updateCamera` (3073), pointer handlers (2970–3009), `makeBird` (2400), `advance` (3800), test hooks `window.__fly` (4059). Upstream's engine rules are in `gryphon-flying/upstream-docs/AGENTS.md`.

@@ -31,6 +31,29 @@ This is a deliberate choice, not laziness:
 Do **not** introduce: bundlers, TypeScript, React, a package.json, or a CI build.
 If a game seems to need one, stop and ask.
 
+## When a game needs a backend
+
+There is no backend today; games save to the device (`localStorage`). When one
+is genuinely needed (syncing progress across devices, a shared leaderboard, or
+hiding an API key such as a text-to-speech key), the decided approach is:
+
+**One Cloudflare Worker + D1 (Cloudflare's SQLite).**
+
+- The games stay static on GitHub Pages; the browser `fetch()`es the Worker.
+- The Worker is a single JS file (`export default { fetch(request, env) {…} }`)
+  deployed with `wrangler deploy`, kept in a `backend/` folder of this repo.
+  Wrangler is a dev tool for that folder only; the games still have no build.
+- Persistent data goes in D1 (bound as `env.DB`). Use KV only for a trivial
+  key → JSON blob, R2 only for files/audio.
+- Secrets (API keys) live in Worker secrets (`wrangler secret put`), never in
+  page code — everything shipped to the browser is public.
+- Kids' data stays minimal: a family code instead of accounts, no names or
+  emails.
+- Not Supabase (free projects pause when idle) and not an in-browser database
+  like DuckDB-WASM (it is per-device, so nothing is shared).
+
+Still check with Chris before adding the backend for the first time.
+
 ## Deploy
 
 GitHub Pages, `main` branch, `/` root, custom domain via `CNAME` (`sophiaethan.com`).

@@ -155,14 +155,6 @@
   .mode-btn small { font-family: 'Andika', sans-serif; font-weight: 400; font-size: .85rem; color: var(--soft); }
   .mode-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
 
-  .sizes { display: flex; align-items: center; justify-content: center; gap: 10px; color: #fff; flex-wrap: wrap; }
-  .sizes span { font-size: 1.05rem; }
-  .chip {
-    min-width: 56px; min-height: 48px; border-radius: 999px;
-    background: rgba(255,255,255,.18); color: #fff;
-    font-family: 'Fredoka', sans-serif; font-weight: 600; font-size: 1.2rem;
-  }
-  .chip.on { background: var(--gold); color: var(--ink); }
 
   .editbtn { align-self: center; min-height: 52px; font-size: 1.15rem; }
 
@@ -210,7 +202,6 @@
   }
   .seg { display: inline-flex; padding: 0 1px 4px; margin: 0 1px; border-bottom: 6px solid transparent; border-radius: 4px; }
   .seg .L { display: inline-block; transition: transform .15s, background .15s; border-radius: 10px; padding: 0 2px; }
-  .seg .L.lit { background: var(--gold); transform: translateY(-6px) scale(1.12); }
   .k-team    { color: var(--k-team);    border-color: var(--k-team); }
   .k-partner { color: var(--k-partner); border-color: var(--k-partner); }
   .k-double  { color: var(--k-double);  border-color: var(--k-double); }
@@ -310,7 +301,6 @@
   .diff .bad { color: var(--coral); text-decoration: line-through; text-decoration-thickness: 4px; }
   .diff .gap { border: 3px dashed var(--coral); min-width: .8em; }
   .diff .miss { background: var(--gold); color: var(--ink); box-shadow: 0 0 0 3px #E59E00 inset; }
-  .diff .L.lit { outline: 4px solid var(--sky); }
   .diff.target .ok { color: var(--ink); }
   .skip { background: none; color: var(--soft); text-decoration: underline; font-size: 1.05rem; min-height: 48px; padding: 0 12px; }
 
@@ -442,18 +432,12 @@
     <div class="listline" id="listLine"></div>
     <button class="quest-btn" id="questBtn">
       <span class="ico">🧭</span>
-      <span>Quest!<small>Learn → Build → Spell</small></span>
+      <span>Let's play!<small>Learn → Build → Spell</small></span>
     </button>
     <div class="modes">
       <button class="mode-btn" data-mode="learn"><span class="ico">👀</span>Learn<small>see &amp; hear</small></button>
       <button class="mode-btn" data-mode="jumble"><span class="ico">🧩</span>Build<small>tap the tiles</small></button>
       <button class="mode-btn" data-mode="quiz"><span class="ico">✏️</span>Spell<small>listen &amp; type</small></button>
-    </div>
-    <div class="sizes" id="sizes">
-      <span>Words:</span>
-      <button class="chip" data-n="5">5</button>
-      <button class="chip" data-n="8">8</button>
-      <button class="chip" data-n="10">10</button>
     </div>
     <button class="btn ghost editbtn" id="editBtn">📝 Spelling words &amp; progress</button>
   </div>
@@ -609,7 +593,7 @@ const newMode = () => ({ ok: 0, help: 0, miss: 0, streak: 0, review: false, help
 function defaults() {
   const id = uid();
   return { v: 1, lists: [{ id, name: 'Sample words', text: SAMPLE_TEXT }], active: id,
-    stats: {}, sentCache: {}, stars: 0, trail: 0, treasures: [], roundSize: 8, rounds: 0 };
+    stats: {}, sentCache: {}, stars: 0, trail: 0, treasures: [], rounds: 0 };
 }
 function load() {
   try {
@@ -838,25 +822,6 @@ function say(parts, rate = 0.85) {
   } catch (e) {}
 }
 function hush() { if (hasTTS) try { speechSynthesis.cancel(); } catch (e) {} }
-const letterName = c => c === "'" ? 'apostrophe' : c === '-' ? 'dash' : c === ' ' ? 'space' : c.toUpperCase();
-
-// say "friend", then each letter with the matching span lit, then the word again
-function spellOut(wordObj, container, startDelay = 0) {
-  const chars = [...wordObj.word];
-  const step = 720;
-  later(() => say(wordObj.word), startDelay);
-  chars.forEach((c, i) => later(() => {
-    container.querySelectorAll('.L.lit').forEach(e => e.classList.remove('lit'));
-    const el = container.querySelector(`.L[data-i="${i}"]`);
-    if (el) el.classList.add('lit');
-    if (c !== ' ') say(letterName(c), 0.9);
-  }, startDelay + 1100 + i * step));
-  later(() => {
-    container.querySelectorAll('.L.lit').forEach(e => e.classList.remove('lit'));
-    say(wordObj.word);
-  }, startDelay + 1100 + chars.length * step + 200);
-}
-
 // ════════════════════════════════════════════════
 //  CONFETTI
 // ════════════════════════════════════════════════
@@ -913,7 +878,6 @@ function renderHome() {
   $('listLine').innerHTML = n
     ? `This week: <b>${esc(list.name)}</b> · ${n} words`
     : 'No words yet — tap 📝 Spelling words below to add some!';
-  document.querySelectorAll('#sizes .chip').forEach(c => c.classList.toggle('on', +c.dataset.n === S.roundSize));
   show('home');
 }
 
@@ -956,7 +920,7 @@ function startRound(mode, only) {
   let pool = words();
   if (!pool.length) { toast('Add some spelling words first! 📝'); return; }
   if (only && only.length) pool = pool.filter(w => only.includes(w.key));
-  const n = Math.min(S.roundSize, pool.length);
+  const n = pool.length;   // every round uses the whole list
   const chosen = pool.map(w => ({ w, p: priority(w, mode) })).sort((a, b) => b.p - a.p).slice(0, n).map(x => x.w);
   shuffle(chosen);
   const items = [];
@@ -1009,12 +973,11 @@ function renderLearn(it) {
       ${sentenceHTML(w)}
       <div class="row">
         <button class="btn sky" data-a="say">🔊 Say it</button>
-        <button class="btn sky" data-a="spell">🔤 Spell it</button>
         ${w.sentence ? '<button class="btn sky" data-a="sent">💬 Sentence</button>' : ''}
       </div>
     </div>
     <button class="btn gold big" data-a="next">I've got it! ➜</button>`;
-  later(() => spellOut(w, $('bw')), 250);
+  later(() => say(w.word), 250);
 }
 
 // ════════════════════════════════════════════════
@@ -1104,7 +1067,6 @@ function hintJumble() {
   const ti = C.tiles.findIndex(t => !t.used && t.c.toLowerCase() === want);
   if (ti < 0) return;
   C.tiles[ti].used = true; C.slots[si].tile = ti; C.slots[si].hint = true;
-  say(letterName(C.target[si]), 0.9);
   sfx.tap();
   drawJumble();
   checkJumbleFull();
@@ -1181,7 +1143,6 @@ function hintQuiz() {
   C.hinted = true;
   C.reveal = Math.min(C.reveal + 1, Math.max(1, w.length - 1));
   $('hintText').textContent = `It starts with: ${w.slice(0, C.reveal)}…`;
-  say(letterName(w[C.reveal - 1]), 0.9);
 }
 function checkQuiz() {
   if (C.busy) return;
@@ -1234,13 +1195,13 @@ function showFeedback(answer) {
       <div class="diff target" id="fbWord">${right}</div>
       <div class="lbl" style="margin:0">The <span style="background:var(--gold);border-radius:6px;padding:0 6px;color:var(--ink)">yellow</span> letters are the ones to fix.</div>
       <div class="row">
-        <button class="btn sky" data-a="fbspell">🔤 Spell it to me</button>
+        <button class="btn sky" data-a="say">🔊 Hear it</button>
         ${w.sentence ? '<button class="btn sky" data-a="sent">💬 Sentence</button>' : ''}
       </div>
     </div>
     <button class="btn gold big" data-a="retry">🔁 Try again</button>
     <button class="skip" data-a="skip">Next word ➜</button>`;
-  later(() => spellOut(w, $('fbWord')), 500);
+  later(() => say(w.word), 500);
 }
 
 function retryItem() {
@@ -1336,7 +1297,7 @@ function endRound() {
     else if (rank[r.outcome] > rank[prev.o] && prev.o !== 'help') prev.o = r.outcome;
   });
   const solo = [...best.values()].filter(b => b.o === 'ok').length;
-  $('doneTitle').textContent = pick(['Round complete!', 'Quest complete!', 'You did it!']);
+  $('doneTitle').textContent = pick(['Round complete!', 'Great practice!', 'You did it!']);
   $('doneStars').textContent = `⭐ ${R.stars} stars · ${solo} word${solo === 1 ? '' : 's'} all by yourself`;
   $('resList').innerHTML = [...best.values()].map(b =>
     `<span class="res ${b.o === 'help' ? 'assist' : ''}">${b.o === 'ok' ? '🌟' : b.o === 'seen' ? '👀' : '🤝'} ${esc(b.w.word)}</span>`).join('');
@@ -1536,9 +1497,6 @@ $('playBtn').addEventListener('click', () => {
 
 $('questBtn').addEventListener('click', () => { ensureAudio(); startRound('quest'); });
 document.querySelectorAll('.mode-btn').forEach(b => b.addEventListener('click', () => { ensureAudio(); startRound(b.dataset.mode); }));
-document.querySelectorAll('#sizes .chip').forEach(b => b.addEventListener('click', () => {
-  S.roundSize = +b.dataset.n; save(); sfx.tap(); renderHome();
-}));
 
 $('editBtn').addEventListener('click', () => { sfx.tap(); renderParent(); });
 
@@ -1556,12 +1514,10 @@ $('stage').addEventListener('click', e => {
   switch (a.dataset.a) {
     case 'say': clearTimers(); C.item.type === 'learn' ? say(w.word) : quizSay(w); break;
     case 'slow': quizSay(w, true); break;
-    case 'spell': clearTimers(); spellOut(w, $('bw')); break;
     case 'sent': clearTimers(); say(w.sentence); break;
     case 'next': finishItem('seen'); break;
     case 'hint': C.item.type === 'jumble' ? hintJumble() : hintQuiz(); break;
     case 'undo': undoJumble(); break;
-    case 'fbspell': clearTimers(); spellOut(w, $('fbWord')); break;
     case 'retry': retryItem(); break;
     case 'skip': finishItem('skip'); break;
   }

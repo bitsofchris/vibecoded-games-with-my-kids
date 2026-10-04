@@ -509,6 +509,7 @@
         <button class="btn" id="hearList">🔊 Test voice</button>
         <button class="btn coral" id="delList">🗑 Delete list</button>
       </div>
+      <div class="help" id="voiceTip"></div>
       <div class="field">
         <label>Sentences she'll hear</label>
         <div class="sents" id="sentPreview"></div>
@@ -794,15 +795,39 @@ const sfx = {
 
 const hasTTS = 'speechSynthesis' in window;
 let voice = null;
+// Best voice on this device: Premium > Enhanced > Edge "Natural" > Google > the rest.
+// Apple's Premium/Enhanced voices are a free one-time download in Settings.
+const NOVELTY = /\b(Albert|Bad News|Bahh|Bells|Boing|Bubbles|Cellos|Good News|Jester|Organ|Superstar|Trinoids|Whisper|Wobble|Zarvox|Fred|Junior|Ralph|Kathy|Grandma|Grandpa|Eddy|Flo|Reed|Rocko|Sandy|Shelley)\b/i;
+const isPremium = v => /premium/i.test(v.name + ' ' + v.voiceURI);
+const isEnhanced = v => /enhanced/i.test(v.name + ' ' + v.voiceURI);
+function voiceScore(v) {
+  const id = v.name + ' ' + v.voiceURI;
+  let s = 0;
+  if (isPremium(v)) s += 100;
+  else if (isEnhanced(v)) s += 80;
+  else if (/natural/i.test(id)) s += 70;
+  else if (/Google US English/i.test(id)) s += 50;
+  if (/^en[-_]US/i.test(v.lang)) s += 6;
+  if (/\b(Ava|Zoe|Evan|Allison|Nathan|Joelle|Noelle|Susan|Tom|Aria|Jenny)\b/i.test(id)) s += 4;
+  if (NOVELTY.test(id)) s -= 200;
+  return s;
+}
 function pickVoice() {
   if (!hasTTS) return;
-  const vs = speechSynthesis.getVoices();
-  const prefs = ['Samantha', 'Google US English', 'Microsoft Aria', 'Microsoft Jenny', 'Ava', 'Allison', 'Karen', 'Moira'];
-  for (const p of prefs) {
-    const v = vs.find(v => v.name.includes(p) && /^en/i.test(v.lang));
-    if (v) { voice = v; return; }
+  const en = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang));
+  voice = en.sort((a, b) => voiceScore(b) - voiceScore(a))[0] || null;
+}
+function voiceTip() {
+  const tip = $('voiceTip');
+  if (!tip) return;
+  if (voice && (isPremium(voice) || isEnhanced(voice) || /natural/i.test(voice.name))) {
+    tip.innerHTML = `Voice: <b>${esc(voice.name)}</b> ✓`;
+  } else {
+    const apple = /Mac|iPhone|iPad/.test(navigator.userAgent);
+    tip.innerHTML = (voice ? `Voice: <b>${esc(voice.name)}</b>. ` : '') + (apple
+      ? 'For a much nicer voice, download one (free): iPhone/iPad: Settings → Accessibility → Spoken Content → Voices → English → <b>Ava (Premium)</b>. Mac: System Settings → Accessibility → Spoken Content → System Voice → Manage Voices. Then reload this page.'
+      : 'For a nicer voice, install a higher-quality English voice in your device’s text-to-speech settings, then reload this page.');
   }
-  voice = vs.find(v => /^en[-_]US/i.test(v.lang)) || vs.find(v => /^en/i.test(v.lang)) || null;
 }
 if (hasTTS) { pickVoice(); speechSynthesis.addEventListener && speechSynthesis.addEventListener('voiceschanged', pickVoice); }
 
@@ -1347,6 +1372,7 @@ function renderParent() {
   $('linkOut').style.display = 'none';
   renderSentPreview();
   fillSentences();
+  pickVoice(); voiceTip();
   renderReport();
   show('parent');
 }

@@ -148,6 +148,17 @@
   .next:active { transform: translateY(3px); box-shadow: 0 2px 0 #B07A00; }
   .hidden { display: none !important; }
 
+  /* step-by-step pills */
+  .steps { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; }
+  .step {
+    font-family: 'Fredoka'; font-weight: 600; font-size: 15px; color: rgba(255,255,255,.75);
+    background: rgba(255,255,255,.12); border-radius: 999px; padding: 6px 12px; white-space: nowrap;
+  }
+  .step.now { background: #fff; color: var(--ink); box-shadow: 0 0 0 3px var(--gold); }
+  .step.done { background: var(--mint); color: #fff; }
+  #trip, #marks { pointer-events: none; }
+  .prompt b.from, .prompt b.to { text-decoration: underline; text-decoration-thickness: 2px; text-underline-offset: 3px; }
+
   /* compass builder tray */
   .tray { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; max-width: 380px; }
   .chip {
@@ -220,6 +231,7 @@
   <div class="body">
     <div class="stage" id="stage"></div>
     <div class="panel" id="panel">
+      <div class="steps hidden" id="steps"></div>
       <div class="rose" id="rose"></div>
       <div class="tray hidden" id="tray"></div>
       <div class="feedback" id="feedback"></div>
@@ -381,6 +393,7 @@ function buildRose(container, size, onPick) {
 
 /* ───────── maps ───────── */
 const M = window.MAPS;
+const LAND_NAME = { na: 'North America', sa: 'South America', eu: 'Europe', af: 'Africa', as: 'Asia', au: 'Australia', an: 'Antarctica' };
 const COLORS = { na: '#A6D63B', sa: '#F7DA2A', eu: '#F59245', af: '#9A78D6', as: '#B08A6E', au: '#E8503F', an: '#F4F8FB' };
 const LAT_TOP = M.world.latTop, WK = M.world.k;
 const wpt = (lat, lon) => [(lon + 180) * WK, (LAT_TOP - lat) * WK];
@@ -398,7 +411,7 @@ const WPLACES = {
   'Atlantic Ocean':{ at: [22, -42],  kind: 'sea' },
   'Pacific Ocean': { at: [-5, -130], kind: 'sea', alt: [10, 168] },
   'Indian Ocean':  { at: [-15, 78],  kind: 'sea' },
-  'Southern Ocean':{ at: [-55, 20],  kind: 'sea', wide: true },
+  'Southern Ocean':{ at: [-50, 20],  kind: 'sea', wide: true },
 };
 
 // Hand-checked world questions (the map can't wrap around, so no trips across the Pacific).
@@ -448,7 +461,7 @@ function worldTrip(it) {
 
 // City label placement tweaks so nothing collides.
 const CITY_LBL = {
-  'Boston': [0, -16, 'middle'], 'Buffalo': [-12, -12, 'end'], 'Miami': [12, 18, 'start'],
+  'Boston': [0, -16, 'middle'], 'Buffalo': [0, -16, 'middle'], 'Miami': [12, 18, 'start'],
   'Atlanta': [-12, 6, 'end'], 'San Francisco': [12, 6, 'start'], 'Orlando': [12, 4, 'start'],
 };
 const cityAt = (n) => { const c = M.us.cities.find(c => c.name === n); return [c.x, c.y]; };
@@ -495,9 +508,9 @@ function worldSVG(hl, eqGlow) {
       <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7CC8F0"/><stop offset="1" stop-color="#3E8FD0"/></linearGradient></defs>
     <g clip-path="url(#frame)"><rect width="${W}" height="${H}" fill="url(#sea)"/>`;
   for (const k of ['na', 'sa', 'eu', 'af', 'as', 'au', 'an'])
-    s += `<path d="${L[k]}" fill="${COLORS[k]}" stroke="#3B2F55" stroke-width=".8" stroke-linejoin="round"/>`;
-  s += `<path d="${L.ru}" fill="${COLORS.eu}" stroke="#3B2F55" stroke-width=".8" clip-path="url(#euClip)"/>`;
-  s += `<path d="${L.ru}" fill="${COLORS.as}" stroke="#3B2F55" stroke-width=".8" clip-path="url(#asClip)"/>`;
+    s += `<path data-place="${LAND_NAME[k]}" d="${L[k]}" fill="${COLORS[k]}" stroke="#3B2F55" stroke-width=".8" stroke-linejoin="round"/>`;
+  s += `<path data-place="Europe" d="${L.ru}" fill="${COLORS.eu}" stroke="#3B2F55" stroke-width=".8" clip-path="url(#euClip)"/>`;
+  s += `<path data-place="Asia" d="${L.ru}" fill="${COLORS.as}" stroke="#3B2F55" stroke-width=".8" clip-path="url(#asClip)"/>`;
   const ey = M.world.eqY;
   s += `<line x1="0" y1="${ey}" x2="${W}" y2="${ey}" stroke="${eqGlow ? '#FFC23D' : '#1D2B4A'}" stroke-width="${eqGlow ? 5 : 2.5}" stroke-dasharray="${eqGlow ? '' : '10 6'}"/>
     <text class="lbl" x="8" y="${ey - 7}" font-size="${(eqGlow ? 22 : 15) * LS}" fill="#1D2B4A" stroke-width="5">Equator</text>`;
@@ -509,9 +522,9 @@ function worldSVG(hl, eqGlow) {
       const hw = Math.max(...words.map(w => w.length)) * fs * 0.32;
       const x = Math.min(W - hw - 4, Math.max(hw + 4, wpt(...a)[0]));
       const y = Math.max((words.length - 1) * fs * 0.5 + fs * 0.5,
-        Math.min(H - fs * words.length, wpt(...a)[1] - (on ? fs * 0.9 : 0)));            // lift above the dot, keep in frame
+        Math.min(H - fs * words.length, wpt(...a)[1] - (on && !p.wide ? fs * 0.9 : 0)));            // lift above the dot, keep in frame
       const fill = on ? '#C0392B' : (p.kind === 'sea' ? '#14365E' : '#2A1F3D');
-      s += `<text class="lbl" x="${x}" y="${y - (words.length - 1) * fs * 0.5 + fs * 0.35}" text-anchor="middle" font-size="${fs}" fill="${fill}" stroke-width="${on ? 6 : 4}">` +
+      s += `<text class="lbl" data-place="${name}" x="${x}" y="${y - (words.length - 1) * fs * 0.5 + fs * 0.35}" text-anchor="middle" font-size="${fs}" fill="${fill}" stroke-width="${on ? 6 : 4}">` +
         words.map((w, i) => `<tspan x="${x}" dy="${i ? fs : 0}">${w}</tspan>`).join('') + '</text>';
     }
   }
@@ -558,11 +571,12 @@ function arrowHead(g, a, b, color, s) {
   const ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI;
   g.appendChild(svgEl('polygon', { points: `0,0 ${-22 * s},${-12 * s} ${-22 * s},${12 * s}`, fill: color, transform: `translate(${b[0]},${b[1]}) rotate(${ang})` }));
 }
+const ARROW = '#5B3FD1';
 function hintArrow(a, b) {
   const g = $('trip'); if (!g || g.querySelector('.hint')) return;
   const h = svgEl('g', { class: 'hint tapme' });
-  h.appendChild(svgEl('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: '#fff', 'stroke-width': 5, 'stroke-dasharray': '6 9', 'stroke-linecap': 'round' }));
-  arrowHead(h, a, b, '#fff', 1);
+  h.appendChild(svgEl('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: ARROW, 'stroke-width': 6, 'stroke-dasharray': '10 8', 'stroke-linecap': 'round' }));
+  arrowHead(h, a, b, ARROW, 1.1);
   g.appendChild(h);
 }
 
@@ -590,7 +604,8 @@ function startMode(m) {
 function runItem() {
   busy = false;
   $('next').classList.add('hidden'); setFeedback('');
-  $('tray').classList.add('hidden'); $('rose').classList.remove('hidden');
+  $('tray').classList.add('hidden'); $('rose').classList.remove('hidden'); $('steps').classList.add('hidden');
+  const st = $('stage'); st.onpointerdown = st.onpointermove = st.onpointerup = st.onpointercancel = null;
   renderDots();
   const it = items[idx];
   ({ place: runPlace, tapdir: runTapDir, which: runWhich, find: runFind, eq: runEq })[it.type](it);
@@ -747,41 +762,146 @@ function verbFor(it) {
 }
 const FAMILY = ['Sophia', 'Ethan', "Carrie's family", "Adam's family", "Jim's family", "Mary's family", 'Grandma', 'A puppy', 'A pirate'];
 
+// Which place did a tap land on? (US: nearest city. World: label, land shape, or ocean region.)
+function svgPoint(svg, e) {
+  const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+  return pt.matrixTransform(svg.getScreenCTM().inverse());
+}
+// `want` wins when labels overlap and the tap touched it.
+function placeAt(isUS, e, want) {
+  const svg = $('stage').querySelector('svg'); if (!svg) return null;
+  const p = svgPoint(svg, e);
+  // A tap anywhere in the wanted label's box (plus a little slop) counts.
+  const sel = isUS ? `.city[data-name="${want}"]` : `text[data-place="${want}"]`;
+  for (const el of $('stage').querySelectorAll(sel)) {
+    const r = el.getBoundingClientRect(), pad = 8;
+    if (e.clientX >= r.left - pad && e.clientX <= r.right + pad && e.clientY >= r.top - pad && e.clientY <= r.bottom + pad) return want;
+  }
+  if (isUS) {
+    const gs = document.elementsFromPoint(e.clientX, e.clientY).map(el => el.closest && el.closest('.city')).filter(Boolean);
+    if (gs.some(g => g.dataset.name === want)) return want;
+    if (gs.length) return gs[0].dataset.name;
+    let best = null, bd = Infinity;
+    for (const c of M.us.cities) { const d = Math.hypot(c.x - p.x, c.y - p.y); if (d < bd) { bd = d; best = c; } }
+    return best && bd <= Math.max(45, 40 / svg.getScreenCTM().a) ? best.name : null;
+  }
+  const lon = p.x / WK - 180, lat = LAT_TOP - p.y / WK;
+  const hits = document.elementsFromPoint(e.clientX, e.clientY).filter(el => el.dataset && el.dataset.place);
+  if (hits.some(el => el.tagName === 'text' && el.dataset.place === want)) return want;
+  const hit = hits.find(el => el.tagName === 'text') || hits[0];
+  if (hit && hit.tagName === 'text') return hit.dataset.place;
+  if (hit && !(lat > 76 && hit.dataset.place === 'Europe')) return hit.dataset.place;   // Svalbard counts as Arctic
+  if (lat > 66) return 'Arctic Ocean';
+  if (lat < -50) return 'Southern Ocean';
+  const atlW = lat > 15 ? -98 : lat > 8 ? -82 : -70, atlE = lat > 30 ? 40 : 20;
+  if (lon > atlW && lon < atlE) return 'Atlantic Ocean';
+  if (lon >= 20 && lon < 147 && lat < 25 && !(lon > 120 && lat > -10)) return 'Indian Ocean';
+  return 'Pacific Ocean';
+}
+
+// Step by step: 1) tap the START  2) drag (or tap) to the END  3) pick the direction.
 function runWhich(it) {
-  const isUS = it.map === 'us';
-  labelScale();
-  $('stage').innerHTML = isUS ? usSVG([it.from, it.to]) : worldSVG([it.from, it.to]);
+  const isUS = it.map === 'us', stage = $('stage');
   let A, B;
   if (isUS) { A = cityAt(it.from); B = cityAt(it.to); }
   else { [A, B] = worldTrip(it); }
   const who = it.who || (it.who = pick(FAMILY));
   const verb = it.verb || (it.verb = verbFor(it));
-  setPrompt(`${who} ${verb} from <span class="hl2">${it.from}</span> to <span class="hl">${it.to}</span>. Which direction?`);
   const sc = isUS ? 1 : 0.8;
-  drawPins(A, B, sc);
-  let misses = 0;
+  let step = 1, misses = 0, stepMiss = 0, found = [];
+
+  function sentence() {
+    const f = step > 1 ? `<span class="hl2">${it.from}</span>` : it.from;
+    const t = step > 2 ? `<span class="hl">${it.to}</span>` : it.to;
+    setPrompt(`${who} ${verb} <b class="from">from</b> ${f} <b class="to">to</b> ${t}. Which direction did they go?`);
+  }
+  function draw() {
+    labelScale();
+    stage.innerHTML = isUS ? usSVG(found) : worldSVG(found);
+    if (step >= 2) drawPins(A, step >= 3 ? B : null, sc);
+    if (step >= 3) hintArrow(A, B);
+  }
+  function steps() {
+    const names = ['1 Start 🟢', '2 End ⭐', '3 Direction 🧭'];
+    $('steps').innerHTML = names.map((n, i) => `<div class="step ${i + 1 < step ? 'done' : i + 1 === step ? 'now' : ''}">${n}</div>`).join('');
+    $('steps').classList.remove('hidden');
+  }
+  function stepHelp() {
+    if (step === 1) setFeedback(`<b>Step 1:</b> Where did they START? Find the place after <b>from</b> and tap it on the map.`);
+    if (step === 2) setFeedback(`<b>Step 2:</b> Where did they END? Drag from the 🟢 to the place after <b>to</b> (or just tap it).`);
+    if (step === 3) setFeedback(`<b>Step 3:</b> Look at the purple arrow from 🟢 to ⭐. Which way does it point?`);
+  }
+  function pulseTarget(name) {
+    for (const el of stage.querySelectorAll(isUS ? `.city[data-name="${name}"]` : `text[data-place="${name}"]`)) el.classList.add('tapme');
+  }
+  function advance() {
+    step++; stepMiss = 0; sfx.good();
+    draw(); sentence(); steps(); stepHelp();
+    if (step === 3) for (const k of it.set) btns[k].classList.remove('ghost');
+  }
+  function missed(html, target) {
+    misses++; stepMiss++; sfx.nope(); setFeedback(html);
+    if (stepMiss >= 2) pulseTarget(target);
+  }
+
+  sentence(); draw(); steps(); stepHelp();
+
+  let rubber = null;
+  stage.onpointerdown = (e) => {
+    if (busy || step > 2) return;
+    e.preventDefault();
+    if (step === 1) {
+      const name = placeAt(isUS, e, it.from);
+      if (!name) return;
+      if (name === it.from) { found = [it.from]; say(it.from); advance(); }
+      else if (name === it.to) missed(`That's where they <b>END</b>. The start comes after the word <b>from</b>.`, it.from);
+      else missed(`That's <b>${name}</b>. Look for <b>${it.from}</b> — it comes after <b>from</b>.`, it.from);
+      return;
+    }
+    // step 2: start a rubber-band line from the start pin
+    try { stage.setPointerCapture(e.pointerId); } catch (err) {}
+    const svg = stage.querySelector('svg'), p = svgPoint(svg, e);
+    rubber = svgEl('line', { x1: A[0], y1: A[1], x2: p.x, y2: p.y, stroke: ARROW, 'stroke-width': 6 * sc, 'stroke-dasharray': '10 8', 'stroke-linecap': 'round' });
+    $('trip').appendChild(rubber);
+  };
+  stage.onpointermove = (e) => {
+    if (!rubber) return;
+    const p = svgPoint(stage.querySelector('svg'), e);
+    rubber.setAttribute('x2', p.x); rubber.setAttribute('y2', p.y);
+  };
+  stage.onpointerup = (e) => {
+    if (!rubber) return;
+    rubber.remove(); rubber = null;
+    const name = placeAt(isUS, e, it.to);
+    if (!name) return;
+    if (name === it.to) { found = [it.from, it.to]; say(it.to); advance(); }
+    else if (name === it.from) missed(`That's the start! Now go to where they ended — the place after <b>to</b>.`, it.to);
+    else missed(`That's <b>${name}</b>. They went <b>to ${it.to}</b>. Try again!`, it.to);
+  };
+  stage.onpointercancel = () => { if (rubber) { rubber.remove(); rubber = null; } };
+
   const btns = buildRose($('rose'), roseSize(), (k, b) => {
-    if (busy || !it.set.includes(k)) return;
+    if (busy || step !== 3 || !it.set.includes(k)) return;
     if (k === it.ans) {
       busy = true; sfx.good(); say(DIRS[k].name);
       b.classList.add('yes');
       for (const o of it.set) if (o !== k) btns[o].classList.add('ghost');
       const h = $('trip').querySelector('.hint'); if (h) h.remove();
       const emoji = isUS ? (verb === 'flew' ? '✈️' : '🚗') : (WPLACES[it.to].kind === 'sea' || verb === 'sailed' ? '⛵' : '✈️');
+      step = 4; steps();
       travel(A, B, emoji, '#E8503F', sc).then(() => {
-        setFeedback(`<span class="big">${DIRS[k].name}!</span>${explain(k)}`);
+        setFeedback(`<span class="big">${it.from} → ${it.to} is ${DIRS[k].name}!</span>${explain(k)}`);
         finishItem(misses === 0);
       });
     } else {
       misses++; sfx.nope();
       b.classList.add('nope');
-      hintArrow(A, B);
-      setFeedback(misses === 1
-        ? 'Not quite! Follow the white arrow from the 🟢 to the ⭐. Is it going up, down, left or right?'
+      setFeedback(stepMiss++ === 0
+        ? 'Not quite! Follow the purple arrow from 🟢 to ⭐. Is it going up or down? Left or right?'
         : moveHint(it.ans));
     }
   });
-  for (const k of ALL) if (!it.set.includes(k)) btns[k].classList.add('off');
+  for (const k of ALL) btns[k].classList.add(it.set.includes(k) ? 'ghost' : 'off');
 }
 
 function runFind(it) {
@@ -820,8 +940,8 @@ function runFind(it) {
       misses++; sfx.nope();
       $('trip').innerHTML = '';
       const g = $('trip');
-      g.appendChild(svgEl('line', { x1: A[0], y1: A[1], x2: B[0], y2: B[1], stroke: '#fff', 'stroke-width': 5, 'stroke-dasharray': '6 9', 'stroke-linecap': 'round' }));
-      arrowHead(g, A, B, '#fff', 1);
+      g.appendChild(svgEl('line', { x1: A[0], y1: A[1], x2: B[0], y2: B[1], stroke: ARROW, 'stroke-width': 6, 'stroke-dasharray': '10 8', 'stroke-linecap': 'round' }));
+      arrowHead(g, A, B, ARROW, 1.1);
       const d = nearest8(B[0] - A[0], B[1] - A[1]);
       setFeedback(`Oops — <b>${best.name}</b> is <b>${DIRS[d].name}</b> of ${it.from}. Look for a city that is <b>${DIRS[it.dir].name}</b>!`);
     }
@@ -888,7 +1008,7 @@ function confetti() {
 let rz;
 addEventListener('resize', () => {
   clearTimeout(rz);
-  rz = setTimeout(() => { if ($('game').classList.contains('on') && !busy && items[idx].type !== 'place' && $('next').classList.contains('hidden')) runItem(); }, 250);
+  rz = setTimeout(() => { if ($('game').classList.contains('on') && !busy && !['place', 'which'].includes(items[idx].type) && $('next').classList.contains('hidden')) runItem(); }, 250);
 });
 showBests();
 </script>

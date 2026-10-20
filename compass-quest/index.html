@@ -126,7 +126,6 @@
   .rbtn small { font-size: 10px; font-weight: 600; margin-top: 2px; letter-spacing: -.2px; }
   .rbtn.card { border-color: var(--coral); color: var(--coral); }
   .rbtn:active { transform: translate(-50%, -46%); }
-  .rbtn.off { opacity: .0; pointer-events: none; }
   .rbtn.ghost { opacity: .18; pointer-events: none; }
   .rbtn.nope { opacity: .35; animation: shake .4s; pointer-events: none; }
   .rbtn.yes { background: var(--mint); color: #fff; border-color: #1E9A5F; transform: translate(-50%,-50%) scale(1.12); }
@@ -292,6 +291,14 @@ function classify(dx, dy) {
   if (off <= 8) return { set: CARD, ans: nearestCard(dx, dy) };
   if (off >= 12) return { set: INTER, ans: quadrant(dx, dy) };
   return null;
+}
+// Every direction that's fair for a trip: anything within ~30° of the arrow,
+// plus the worksheet answer. A trip 15° off East accepts both East and Northeast.
+function okDirs(dx, dy, primary) {
+  const a = Math.atan2(dy, dx) * 180 / Math.PI;
+  const ok = ALL.filter(k => Math.abs(((a - DIRS[k].ang) % 360 + 540) % 360 - 180) <= 31);
+  if (primary && !ok.includes(primary)) ok.push(primary);
+  return ok;
 }
 // Closest of all 8 (for describing a wrong tap).
 function nearest8(dx, dy) {
@@ -461,7 +468,7 @@ function worldTrip(it) {
 
 // City label placement tweaks so nothing collides.
 const CITY_LBL = {
-  'Boston': [0, -16, 'middle'], 'Buffalo': [0, -16, 'middle'], 'Miami': [12, 18, 'start'],
+  'Boston': [0, -16, 'middle'], 'Washington D.C.': [-40, 26, 'middle'], 'Buffalo': [0, -16, 'middle'], 'Miami': [12, 18, 'start'],
   'Atlanta': [-12, 6, 'end'], 'San Francisco': [12, 6, 'start'], 'Orlando': [12, 4, 'start'],
 };
 const cityAt = (n) => { const c = M.us.cities.find(c => c.name === n); return [c.x, c.y]; };
@@ -751,9 +758,9 @@ function usRound() {
   return [which[0], ...rounds];
 }
 function usFindOk(from, to, dir) {
-  const A = cityAt(from), B = cityAt(to), dx = B[0] - A[0], dy = B[1] - A[1], off = offAxis(dx, dy);
-  if (DIRS[dir].card) return off <= 15 && nearestCard(dx, dy) === dir;
-  return off >= 10 && quadrant(dx, dy) === dir;
+  const A = cityAt(from), B = cityAt(to), dx = B[0] - A[0], dy = B[1] - A[1];
+  const c = classify(dx, dy);
+  return okDirs(dx, dy, c && c.ans).includes(dir);
 }
 
 function verbFor(it) {
@@ -808,12 +815,14 @@ function runWhich(it) {
   const who = it.who || (it.who = pick(FAMILY));
   const verb = it.verb || (it.verb = verbFor(it));
   const sc = isUS ? 1 : 0.8;
+  const ok = okDirs(B[0] - A[0], B[1] - A[1], it.ans);
   let step = 1, misses = 0, stepMiss = 0, found = [];
 
   function sentence() {
     const f = step > 1 ? `<span class="hl2">${it.from}</span>` : it.from;
     const t = step > 2 ? `<span class="hl">${it.to}</span>` : it.to;
-    setPrompt(`${who} ${verb} <b class="from">from</b> ${f} <b class="to">to</b> ${t}. Which direction did they go?`);
+    const dot = it.to.endsWith('.') ? '' : '.';
+    setPrompt(`${who} ${verb} <b class="from">from</b> ${f} <b class="to">to</b> ${t}${dot} Which direction did they go?`);
   }
   function draw() {
     labelScale();
@@ -837,7 +846,7 @@ function runWhich(it) {
   function advance() {
     step++; stepMiss = 0; sfx.good();
     draw(); sentence(); steps(); stepHelp();
-    if (step === 3) for (const k of it.set) btns[k].classList.remove('ghost');
+    if (step === 3) for (const k of ALL) btns[k].classList.remove('ghost');
   }
   function missed(html, target) {
     misses++; stepMiss++; sfx.nope(); setFeedback(html);
@@ -881,16 +890,18 @@ function runWhich(it) {
   stage.onpointercancel = () => { if (rubber) { rubber.remove(); rubber = null; } };
 
   const btns = buildRose($('rose'), roseSize(), (k, b) => {
-    if (busy || step !== 3 || !it.set.includes(k)) return;
-    if (k === it.ans) {
+    if (busy || step !== 3) return;
+    if (ok.includes(k)) {
       busy = true; sfx.good(); say(DIRS[k].name);
       b.classList.add('yes');
-      for (const o of it.set) if (o !== k) btns[o].classList.add('ghost');
+      for (const o of ALL) if (o !== k) btns[o].classList.add(ok.includes(o) ? 'filled' : 'ghost');
       const h = $('trip').querySelector('.hint'); if (h) h.remove();
       const emoji = isUS ? (verb === 'flew' ? '✈️' : '🚗') : (WPLACES[it.to].kind === 'sea' || verb === 'sailed' ? '⛵' : '✈️');
       step = 4; steps();
       travel(A, B, emoji, '#E8503F', sc).then(() => {
-        setFeedback(`<span class="big">${it.from} → ${it.to} is ${DIRS[k].name}!</span>${explain(k)}`);
+        const also = ok.filter(o => o !== k).map(o => DIRS[o].name);
+        setFeedback(`<span class="big">${it.from} → ${it.to} is ${DIRS[k].name}!</span>${explain(k)}` +
+          (also.length ? `<br>(${also.join(' or ')} works too — it's a little bit of both!)` : ''));
         finishItem(misses === 0);
       });
     } else {
@@ -901,17 +912,17 @@ function runWhich(it) {
         : moveHint(it.ans));
     }
   });
-  for (const k of ALL) btns[k].classList.add(it.set.includes(k) ? 'ghost' : 'off');
+  for (const k of ALL) btns[k].classList.add('ghost');
 }
 
 function runFind(it) {
   labelScale();
   $('stage').innerHTML = usSVG([it.from]);
   const A = cityAt(it.from);
-  setPrompt(`Start in <span class="hl2">${it.from}</span>. Go <span class="hl">${DIRS[it.dir].name.toUpperCase()}</span>! Tap a city that way.`);
+  setPrompt(`Start in <span class="hl2">${it.from}</span>${it.from.endsWith(".") ? "" : "."} Go <span class="hl">${DIRS[it.dir].name.toUpperCase()}</span>! Tap a city that way.`);
   drawPins(A, null, 1);
   const btns = buildRose($('rose'), Math.round(roseSize() * 0.8), null);
-  for (const k of ALL) if (k !== it.dir) btns[k].classList.add('ghost'); else btns[k].classList.add('yes');
+  btns[it.dir].classList.add('yes');
   for (const c of document.querySelectorAll('#stage .city')) if (c.dataset.name !== it.from) c.classList.add('tapme');
   let misses = 0;
   const svg = $('stage').querySelector('svg');
@@ -964,7 +975,9 @@ function runEq(it) {
   setPrompt(`Is <span class="hl">${it.place}</span> NORTH or SOUTH of the <span class="hl2">Equator</span>?`);
   let misses = 0;
   const btns = buildRose($('rose'), roseSize(), (k, b) => {
-    if (busy || (k !== 'N' && k !== 'S')) return;
+    if (busy) return;
+    if (k !== 'N' && k !== 'S') { sfx.nope(); b.classList.add('nope'); setTimeout(() => b.classList.remove('nope'), 450);
+      return setFeedback(`For the Equator it's just <b>North</b> (above) or <b>South</b> (below)!`); }
     if (k === it.ans) {
       busy = true; sfx.good(); say(DIRS[k].name);
       b.classList.add('yes');
@@ -975,7 +988,6 @@ function runEq(it) {
       setFeedback('Find the yellow Equator line. Is the green dot above it or below it?');
     }
   });
-  for (const k of ALL) if (k !== 'N' && k !== 'S') btns[k].classList.add('off');
 }
 
 /* ───────── win ───────── */

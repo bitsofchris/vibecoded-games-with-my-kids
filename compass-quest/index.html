@@ -1,0 +1,896 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>🧭 Compass Quest</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Andika:wght@400;700&family=Fredoka:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --sea1: #1C7FB5;
+    --sea2: #12406B;
+    --paper: #FFF8E7;
+    --ink: #2A1F3D;
+    --soft: #6E6488;
+    --gold: #FFC23D;
+    --coral: #FF6B5B;
+    --mint: #2FBF7A;
+    --sky: #8FD8FF;
+    --violet: #8D63F2;
+    --card: #FFFDF6;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  html, body { height: 100%; }
+  body {
+    background: linear-gradient(170deg, var(--sea1) 0%, var(--sea2) 100%);
+    background-color: var(--sea2);
+    color: var(--ink);
+    font-family: 'Andika', 'Fredoka', system-ui, sans-serif;
+    overflow: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
+    -webkit-tap-highlight-color: transparent;
+    touch-action: manipulation;
+  }
+  button {
+    font-family: inherit; color: inherit; border: none; cursor: pointer;
+    touch-action: manipulation; -webkit-tap-highlight-color: transparent;
+  }
+  h1, h2, .fred { font-family: 'Fredoka', system-ui, sans-serif; }
+
+  /* ── SCREENS ── */
+  .screen { position: fixed; inset: 0; display: none; }
+  .screen.on { display: flex; }
+
+  /* ── START ── */
+  #start {
+    flex-direction: column; align-items: center; justify-content: center;
+    gap: 18px; padding: 70px 16px 24px; overflow-y: auto; text-align: center; color: #fff;
+  }
+  #start h1 { font-size: clamp(40px, 8vw, 72px); text-shadow: 0 4px 0 rgba(0,0,0,.25); line-height: 1; }
+  #start h1 .spin { display: inline-block; animation: wobble 4s ease-in-out infinite; }
+  @keyframes wobble { 0%,100% { transform: rotate(-12deg); } 50% { transform: rotate(14deg); } }
+  #start .sub { font-size: clamp(16px, 2.6vw, 22px); opacity: .92; max-width: 560px; }
+  .nesw {
+    background: rgba(255,255,255,.12); border: 2px dashed rgba(255,255,255,.4);
+    border-radius: 16px; padding: 10px 18px; font-size: clamp(16px, 2.6vw, 21px);
+  }
+  .nesw b { color: var(--gold); font-size: 1.25em; }
+  .modes { display: grid; gap: 14px; width: min(100%, 880px); grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); }
+  .mode {
+    background: var(--card); color: var(--ink); border-radius: 22px; padding: 18px 16px 16px;
+    box-shadow: 0 6px 0 rgba(0,0,0,.22); display: flex; flex-direction: column; align-items: center; gap: 4px;
+    transition: transform .15s; min-height: 150px;
+  }
+  .mode:active { transform: translateY(4px); box-shadow: 0 2px 0 rgba(0,0,0,.22); }
+  .mode .ico { font-size: 52px; line-height: 1.1; }
+  .mode .t { font-family: 'Fredoka'; font-size: 24px; font-weight: 700; }
+  .mode .d { font-size: 15px; color: var(--soft); }
+  .mode .best { font-size: 14px; color: #B07A00; min-height: 18px; font-weight: 700; }
+
+  /* ── GAME ── */
+  #game { flex-direction: column; }
+  .top {
+    display: flex; align-items: center; gap: 10px; padding: 10px 14px 6px 68px; color: #fff; min-height: 64px;
+  }
+  .prompt {
+    flex: 1; font-family: 'Fredoka'; font-weight: 600; font-size: clamp(18px, 2.8vw, 28px); line-height: 1.2;
+  }
+  .prompt .hl { color: var(--gold); }
+  .prompt .hl2 { color: #9BF0B9; }
+  .stars { font-family: 'Fredoka'; font-weight: 700; font-size: 22px; white-space: nowrap; }
+  .dots { display: flex; gap: 5px; padding: 0 14px 6px 68px; flex-wrap: wrap; }
+  .dot { width: 14px; height: 14px; border-radius: 50%; background: rgba(255,255,255,.25); }
+  .dot.now { background: #fff; transform: scale(1.2); }
+  .dot.good { background: var(--gold); }
+  .dot.ok { background: #9BD3F5; }
+
+  .body { flex: 1; display: flex; gap: 12px; padding: 4px 12px 12px; min-height: 0; }
+  .stage {
+    flex: 1; min-width: 0; min-height: 0; display: flex; align-items: center; justify-content: center;
+    position: relative;
+  }
+  .stage svg.map {
+    width: 100%; height: 100%; display: block;
+    filter: drop-shadow(0 6px 0 rgba(0,0,0,.2));
+    touch-action: none;
+  }
+  .panel {
+    width: min(38%, 400px); display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px;
+  }
+  @media (max-aspect-ratio: 1/1) {
+    .body { flex-direction: column; }
+    .panel { width: 100%; flex: 0 0 auto; }
+    .stage { flex: 1 1 auto; }
+  }
+
+  /* answer rose */
+  .rose { position: relative; width: var(--rs, 280px); height: var(--rs, 280px); flex: 0 0 auto; }
+  .rose .face {
+    position: absolute; inset: 8%; border-radius: 50%;
+    background: radial-gradient(circle, #FFFDF6 0 55%, #F3E6C4 56% 100%);
+    box-shadow: 0 6px 0 rgba(0,0,0,.2), inset 0 0 0 4px #D9C38E;
+  }
+  .rose svg.star { position: absolute; inset: 18%; width: 64%; height: 64%; }
+  .rbtn {
+    position: absolute; transform: translate(-50%, -50%);
+    width: var(--bs, 64px); height: var(--bs, 64px); border-radius: 50%;
+    background: #fff; box-shadow: 0 4px 0 rgba(0,0,0,.25); border: 3px solid var(--violet);
+    font-family: 'Fredoka'; font-weight: 700; font-size: calc(var(--bs, 64px) * .36); color: var(--violet);
+    display: flex; align-items: center; justify-content: center; flex-direction: column; line-height: 1;
+    transition: transform .12s, opacity .2s, background .2s;
+  }
+  .rbtn small { font-size: 10px; font-weight: 600; margin-top: 2px; letter-spacing: -.2px; }
+  .rbtn.card { border-color: var(--coral); color: var(--coral); }
+  .rbtn:active { transform: translate(-50%, -46%); }
+  .rbtn.off { opacity: .0; pointer-events: none; }
+  .rbtn.ghost { opacity: .18; pointer-events: none; }
+  .rbtn.nope { opacity: .35; animation: shake .4s; pointer-events: none; }
+  .rbtn.yes { background: var(--mint); color: #fff; border-color: #1E9A5F; transform: translate(-50%,-50%) scale(1.12); }
+  .rbtn.blank { color: transparent; border-style: dashed; border-color: #B9A77A; background: rgba(255,255,255,.7); }
+  .rbtn.blank.target { border-color: var(--gold); box-shadow: 0 0 0 5px rgba(255,194,61,.5), 0 4px 0 rgba(0,0,0,.25); }
+  .rbtn.filled { color: #fff; background: var(--violet); border-color: #6A43D6; }
+  .rbtn.filled.card { background: var(--coral); border-color: #D9483A; }
+  @keyframes shake { 0%,100% { margin-left: 0; } 25% { margin-left: -8px; } 75% { margin-left: 8px; } }
+
+  .feedback {
+    min-height: 54px; width: 100%; max-width: 420px; text-align: center; color: #fff;
+    font-size: clamp(16px, 2.3vw, 20px); line-height: 1.3; font-weight: 700;
+  }
+  .feedback .big { font-family: 'Fredoka'; font-size: 1.3em; color: var(--gold); display: block; }
+  .next {
+    background: var(--gold); color: var(--ink); font-family: 'Fredoka'; font-weight: 700; font-size: 24px;
+    padding: 12px 34px; border-radius: 999px; box-shadow: 0 5px 0 #B07A00; min-height: 56px; min-width: 160px;
+  }
+  .next:active { transform: translateY(3px); box-shadow: 0 2px 0 #B07A00; }
+  .hidden { display: none !important; }
+
+  /* compass builder tray */
+  .tray { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; width: 100%; max-width: 380px; }
+  .chip {
+    background: #fff; border-radius: 16px; min-height: 60px; box-shadow: 0 4px 0 rgba(0,0,0,.25);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1.05;
+    font-family: 'Fredoka'; font-weight: 700; font-size: 24px; color: var(--violet); border: 3px solid var(--violet);
+    touch-action: none;
+  }
+  .chip small { font-size: 11px; font-weight: 600; }
+  .chip.card { color: var(--coral); border-color: var(--coral); }
+  .chip.sel { background: var(--gold); transform: translateY(-4px); }
+  .chip.used { visibility: hidden; }
+  .chip.drag { opacity: .35; }
+  .dragghost {
+    position: fixed; z-index: 2000; pointer-events: none; transform: translate(-50%, -60%) scale(1.15);
+    width: 76px; height: 64px;
+  }
+
+  /* map bits */
+  .lbl { font-family: 'Fredoka', sans-serif; font-weight: 700; paint-order: stroke; stroke: #fff; stroke-linejoin: round; }
+  .pulse { animation: pulse 1.2s ease-in-out infinite; transform-box: fill-box; transform-origin: center; }
+  @keyframes pulse { 0%,100% { transform: scale(1); } 50% { transform: scale(1.35); } }
+  .tapme { animation: blink 1.4s ease-in-out infinite; }
+  @keyframes blink { 50% { opacity: .45; } }
+
+  /* ── WIN ── */
+  #win { flex-direction: column; align-items: center; justify-content: center; gap: 16px; color: #fff; text-align: center; padding: 70px 16px 24px; }
+  #win h2 { font-size: clamp(36px, 7vw, 64px); text-shadow: 0 4px 0 rgba(0,0,0,.25); }
+  #win .wstars { font-size: clamp(26px, 5vw, 40px); font-family: 'Fredoka'; font-weight: 700; }
+  #win .badge { font-size: 110px; animation: wobble 3s ease-in-out infinite; }
+  .row { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+  .ghostbtn { background: rgba(255,255,255,.16); color: #fff; box-shadow: 0 5px 0 rgba(0,0,0,.2); }
+  #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 5; }
+</style>
+</head>
+<body>
+<a href="../" style="position:fixed;top:12px;left:12px;z-index:1000;text-decoration:none;font-size:28px;background:rgba(255,255,255,0.1);border:1px solid rgba(255,255,255,0.2);border-radius:50%;width:44px;height:44px;display:flex;align-items:center;justify-content:center;touch-action:manipulation;" aria-label="Back to Arcade">🏠</a>
+
+<!-- START -->
+<section id="start" class="screen on">
+  <h1><span class="spin">🧭</span> Compass Quest</h1>
+  <div class="sub">Learn the compass rose, then travel the map! Which way did they go?</div>
+  <div class="nesw">Clockwise from the top: <b>N</b>ever <b>E</b>at <b>S</b>oggy <b>W</b>affles</div>
+  <div class="modes">
+    <button class="mode" data-mode="compass">
+      <div class="ico">🧭</div><div class="t">Build the Compass</div>
+      <div class="d">Put all 8 directions in the right spots</div>
+      <div class="best" id="best-compass"></div>
+    </button>
+    <button class="mode" data-mode="us">
+      <div class="ico">🚗</div><div class="t">U.S. Road Trip</div>
+      <div class="d">Seattle, Buffalo, Orlando… which way?</div>
+      <div class="best" id="best-us"></div>
+    </button>
+    <button class="mode" data-mode="world">
+      <div class="ico">🌍</div><div class="t">World Trip</div>
+      <div class="d">Continents, oceans and the Equator</div>
+      <div class="best" id="best-world"></div>
+    </button>
+  </div>
+</section>
+
+<!-- GAME -->
+<section id="game" class="screen">
+  <div class="top">
+    <div class="prompt" id="prompt"></div>
+    <div class="stars" id="stars">⭐ 0</div>
+  </div>
+  <div class="dots" id="dots"></div>
+  <div class="body">
+    <div class="stage" id="stage"></div>
+    <div class="panel" id="panel">
+      <div class="rose" id="rose"></div>
+      <div class="tray hidden" id="tray"></div>
+      <div class="feedback" id="feedback"></div>
+      <button class="next hidden" id="next">Next ➜</button>
+    </div>
+  </div>
+</section>
+
+<!-- WIN -->
+<section id="win" class="screen">
+  <div class="badge" id="wbadge">🏆</div>
+  <h2 id="wtitle">Compass Captain!</h2>
+  <div class="wstars" id="wstars"></div>
+  <div class="row">
+    <button class="next" id="again">Play again</button>
+    <button class="next ghostbtn" id="menu">Pick a trip</button>
+  </div>
+</section>
+<canvas id="confetti"></canvas>
+
+<script src="maps.js"></script>
+<script>
+'use strict';
+const $ = (id) => document.getElementById(id);
+const rnd = (n) => Math.floor(Math.random() * n);
+const pick = (a) => a[rnd(a.length)];
+const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = rnd(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+/* ───────── directions ───────── */
+// angle is in screen space: 0 = right (East), 90 = down (South)
+const DIRS = {
+  N:  { name: 'North',     ang: -90,  card: true },
+  NE: { name: 'Northeast', ang: -45 },
+  E:  { name: 'East',      ang: 0,    card: true },
+  SE: { name: 'Southeast', ang: 45 },
+  S:  { name: 'South',     ang: 90,   card: true },
+  SW: { name: 'Southwest', ang: 135 },
+  W:  { name: 'West',      ang: 180,  card: true },
+  NW: { name: 'Northwest', ang: -135 },
+};
+const ALL = Object.keys(DIRS);
+const CARD = ['N', 'E', 'S', 'W'];
+const INTER = ['NE', 'SE', 'SW', 'NW'];
+
+// How far (degrees) a trip is from the nearest straight N/E/S/W line.
+function offAxis(dx, dy) {
+  const a = ((Math.atan2(dy, dx) * 180 / Math.PI) % 90 + 90) % 90;
+  return Math.min(a, 90 - a);
+}
+function nearestCard(dx, dy) {
+  return Math.abs(dx) > Math.abs(dy) ? (dx > 0 ? 'E' : 'W') : (dy > 0 ? 'S' : 'N');
+}
+function quadrant(dx, dy) { return (dy < 0 ? 'N' : 'S') + (dx > 0 ? 'E' : 'W'); }
+// Like the worksheet: clearly-straight trips get N/E/S/W choices; anything with a real
+// tilt gets the four in-between choices and the answer is the quadrant. Borderline: skip.
+function classify(dx, dy) {
+  const off = offAxis(dx, dy);
+  if (off <= 8) return { set: CARD, ans: nearestCard(dx, dy) };
+  if (off >= 12) return { set: INTER, ans: quadrant(dx, dy) };
+  return null;
+}
+// Closest of all 8 (for describing a wrong tap).
+function nearest8(dx, dy) {
+  const a = Math.atan2(dy, dx) * 180 / Math.PI;
+  let best = 'E', bd = 999;
+  for (const k of ALL) { let d = Math.abs(((a - DIRS[k].ang) % 360 + 540) % 360 - 180); if (d < bd) { bd = d; best = k; } }
+  return best;
+}
+const MOVE = { N: 'up ⬆️', S: 'down ⬇️', E: 'right ➡️', W: 'left ⬅️' };
+function explain(ans) {
+  if (DIRS[ans].card) return `Straight ${MOVE[ans]} = <b>${DIRS[ans].name}</b>!`;
+  return `${MOVE[ans[0]]} = ${DIRS[ans[0]].name}, ${MOVE[ans[1]]} = ${DIRS[ans[1]].name} → <b>${DIRS[ans].name}</b>!`;
+}
+function moveHint(ans) {
+  if (DIRS[ans].card) return `The arrow goes straight ${MOVE[ans]}. Which direction is ${MOVE[ans].split(' ')[0]} on a map?`;
+  return `The arrow goes ${MOVE[ans[0]]} and ${MOVE[ans[1]]}. Mix those two directions together!`;
+}
+
+/* ───────── audio ───────── */
+let actx = null;
+function audioOn() {
+  try { if (!actx) actx = new (window.AudioContext || window.webkitAudioContext)(); actx.resume(); } catch (e) {}
+}
+function tone(freq, t0, dur, type = 'triangle', vol = 0.18) {
+  if (!actx) return;
+  const t = actx.currentTime + t0, o = actx.createOscillator(), g = actx.createGain();
+  o.type = type; o.frequency.setValueAtTime(freq, t);
+  g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+  o.connect(g).connect(actx.destination); o.start(t); o.stop(t + dur + 0.05);
+}
+const sfx = {
+  good() { tone(660, 0, .15); tone(880, .1, .25); },
+  great() { tone(523, 0, .12); tone(659, .09, .12); tone(784, .18, .12); tone(1047, .27, .3); },
+  nope() { tone(220, 0, .22, 'sine', .15); tone(196, .12, .25, 'sine', .12); },
+  tap() { tone(520, 0, .06, 'square', .05); },
+  whoosh() { if (!actx) return; for (let i = 0; i < 6; i++) tone(300 + i * 70, i * .05, .12, 'sine', .05); },
+  win() { [523, 659, 784, 1047, 784, 1047, 1319].forEach((f, i) => tone(f, i * .12, .3)); },
+};
+let voice = null;
+function say(text) {
+  try {
+    if (!('speechSynthesis' in window)) return;
+    speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text);
+    if (!voice) { const vs = speechSynthesis.getVoices().filter(v => /^en/i.test(v.lang)); voice = vs.find(v => /premium|enhanced|samantha/i.test(v.name)) || vs[0] || null; }
+    if (voice) u.voice = voice;
+    u.rate = 0.95; u.pitch = 1.1; speechSynthesis.speak(u);
+  } catch (e) {}
+}
+
+/* ───────── storage ───────── */
+function getBest(m) { try { return +localStorage.getItem('cq-best-' + m) || 0; } catch (e) { return 0; } }
+function setBest(m, v) { try { if (v > getBest(m)) localStorage.setItem('cq-best-' + m, v); } catch (e) {} }
+function showBests() {
+  for (const m of ['compass', 'us', 'world']) { const b = getBest(m); $('best-' + m).textContent = b ? 'Best: ' + b + ' ⭐' : ''; }
+}
+
+/* ───────── screens ───────── */
+function show(id) { for (const s of document.querySelectorAll('.screen')) s.classList.toggle('on', s.id === id); }
+
+/* ───────── answer rose ───────── */
+const SVGNS = 'http://www.w3.org/2000/svg';
+const STAR_SVG = `<svg class="star" viewBox="-100 -100 200 200">
+  <g opacity=".9">
+    <polygon points="0,-100 14,-14 0,0" fill="#F27D6E"/><polygon points="0,-100 -14,-14 0,0" fill="#C9473A"/>
+    <polygon points="100,0 14,14 0,0" fill="#F27D6E"/><polygon points="100,0 14,-14 0,0" fill="#C9473A"/>
+    <polygon points="0,100 -14,14 0,0" fill="#F27D6E"/><polygon points="0,100 14,14 0,0" fill="#C9473A"/>
+    <polygon points="-100,0 -14,-14 0,0" fill="#F27D6E"/><polygon points="-100,0 -14,14 0,0" fill="#C9473A"/>
+    <g transform="rotate(45)">
+      <polygon points="0,-62 10,-10 0,0" fill="#B39BF5"/><polygon points="0,-62 -10,-10 0,0" fill="#7A55E0"/>
+      <polygon points="62,0 10,10 0,0" fill="#B39BF5"/><polygon points="62,0 10,-10 0,0" fill="#7A55E0"/>
+      <polygon points="0,62 -10,10 0,0" fill="#B39BF5"/><polygon points="0,62 10,10 0,0" fill="#7A55E0"/>
+      <polygon points="-62,0 -10,-10 0,0" fill="#B39BF5"/><polygon points="-62,0 -10,10 0,0" fill="#7A55E0"/>
+    </g>
+    <circle r="9" fill="#FFC23D" stroke="#B07A00" stroke-width="3"/>
+  </g></svg>`;
+
+// Builds 8 buttons around a compass face. Returns {el, btn(k)}.
+function buildRose(container, size, onPick) {
+  container.innerHTML = '<div class="face"></div>' + STAR_SVG;
+  container.style.setProperty('--rs', size + 'px');
+  const bs = Math.max(52, Math.round(size * 0.22));
+  container.style.setProperty('--bs', bs + 'px');
+  const btns = {};
+  for (const k of ALL) {
+    const d = DIRS[k], r = d.card ? 0.42 : 0.36;
+    const b = document.createElement('button');
+    b.className = 'rbtn' + (d.card ? ' card' : '');
+    b.dataset.k = k;
+    b.innerHTML = k + '<small>' + d.name + '</small>';
+    b.style.left = (50 + Math.cos(d.ang * Math.PI / 180) * r * 100) + '%';
+    b.style.top = (50 + Math.sin(d.ang * Math.PI / 180) * r * 100) + '%';
+    b.addEventListener('pointerdown', (e) => { e.preventDefault(); onPick && onPick(k, b); }, { passive: false });
+    container.appendChild(b); btns[k] = b;
+  }
+  return btns;
+}
+
+/* ───────── maps ───────── */
+const M = window.MAPS;
+const COLORS = { na: '#A6D63B', sa: '#F7DA2A', eu: '#F59245', af: '#9A78D6', as: '#B08A6E', au: '#E8503F', an: '#F4F8FB' };
+const LAT_TOP = M.world.latTop, WK = M.world.k;
+const wpt = (lat, lon) => [(lon + 180) * WK, (LAT_TOP - lat) * WK];
+
+// Anchor points roughly where the labels sit on the classroom map.
+const WPLACES = {
+  'North America': { at: [47, -102], kind: 'land', c: 'na' },
+  'South America': { at: [-12, -60], kind: 'land', c: 'sa' },
+  'Europe':        { at: [52, 18],   kind: 'land', c: 'eu' },
+  'Africa':        { at: [6, 20],    kind: 'land', c: 'af' },
+  'Asia':          { at: [50, 92],   kind: 'land', c: 'as' },
+  'Australia':     { at: [-25, 134], kind: 'land', c: 'au' },
+  'Antarctica':    { at: [-73, 20],  kind: 'land', c: 'an', wide: true },
+  'Arctic Ocean':  { at: [79, 10],   kind: 'sea', wide: true },
+  'Atlantic Ocean':{ at: [22, -42],  kind: 'sea' },
+  'Pacific Ocean': { at: [-5, -130], kind: 'sea', alt: [10, 168] },
+  'Indian Ocean':  { at: [-15, 78],  kind: 'sea' },
+  'Southern Ocean':{ at: [-55, 20],  kind: 'sea', wide: true },
+};
+
+// Hand-checked world questions (the map can't wrap around, so no trips across the Pacific).
+// Optional 4th item moves the start/finish dot so the arrow really points that way.
+const WORLD_Q = [
+  ['Europe', 'Africa', 'S'], ['Africa', 'Europe', 'N'],
+  ['Europe', 'Asia', 'E'], ['Asia', 'Europe', 'W'],
+  ['North America', 'Europe', 'E'], ['Europe', 'North America', 'W'],
+  ['South America', 'Africa', 'E', { to: [-10, 22] }], ['Africa', 'South America', 'W', { from: [-10, 22] }],
+  ['Asia', 'Australia', 'SE'], ['Australia', 'Asia', 'NW'],
+  ['North America', 'Africa', 'SE'], ['Africa', 'North America', 'NW'],
+  ['South America', 'Europe', 'NE'], ['Europe', 'South America', 'SW'],
+  ['Africa', 'Asia', 'NE'], ['Asia', 'Africa', 'SW'],
+  ['Africa', 'Australia', 'SE'], ['Australia', 'Africa', 'NW'],
+  ['Africa', 'Antarctica', 'S'], ['Antarctica', 'Australia', 'N'], ['South America', 'Antarctica', 'S'],
+  ['Europe', 'Arctic Ocean', 'N'], ['Arctic Ocean', 'North America', 'S'],
+  ['North America', 'Atlantic Ocean', 'E', { to: [42, -40] }], ['Atlantic Ocean', 'North America', 'W', { from: [42, -40] }],
+  ['Europe', 'Atlantic Ocean', 'W', { to: [47, -28] }], ['Africa', 'Atlantic Ocean', 'W', { to: [4, -22] }], ['South America', 'Atlantic Ocean', 'NE'],
+  ['Africa', 'Indian Ocean', 'E', { from: [-12, 28] }], ['Australia', 'Indian Ocean', 'W'], ['Asia', 'Indian Ocean', 'S'],
+  ['Asia', 'Pacific Ocean', 'E', { to: [44, 165] }], ['Australia', 'Pacific Ocean', 'E', { to: [-25, 172] }],
+  ['North America', 'Pacific Ocean', 'W', { to: [42, -140] }], ['South America', 'Pacific Ocean', 'W'],
+  ['Africa', 'Southern Ocean', 'S'], ['Southern Ocean', 'Antarctica', 'S'], ['Australia', 'Southern Ocean', 'S'],
+  ['Europe', 'Indian Ocean', 'SE'], ['Indian Ocean', 'Europe', 'NW'],
+];
+const EQ_Q = [['North America', 'N'], ['Europe', 'N'], ['Asia', 'N'], ['Arctic Ocean', 'N'],
+              ['Australia', 'S'], ['Antarctica', 'S'], ['Southern Ocean', 'S']];
+
+// Point on the map for a world place, given where the trip starts from.
+function wplace(name, other) {
+  const p = WPLACES[name];
+  if (p.wide && other) return [other[0], wpt(p.at[0], 0)[1]];      // Antarctica etc. sit straight below/above
+  if (p.alt && other) {                                                // Pacific: use whichever side is closer
+    const a = wpt(...p.at), b = wpt(...p.alt);
+    return Math.hypot(a[0] - other[0], a[1] - other[1]) < Math.hypot(b[0] - other[0], b[1] - other[1]) ? a : b;
+  }
+  return wpt(...p.at);
+}
+
+// Start and finish points for a world question.
+function worldTrip(it) {
+  const P = it.pts || {};
+  let A = P.from ? wpt(...P.from) : wplace(it.from);
+  const B = P.to ? wpt(...P.to) : wplace(it.to, A);
+  if (WPLACES[it.from].wide && !P.from) A = wplace(it.from, B);   // e.g. Antarctica: start straight below
+  return [A, B];
+}
+
+// City label placement tweaks so nothing collides.
+const CITY_LBL = {
+  'Boston': [0, -16, 'middle'], 'Buffalo': [-12, -12, 'end'], 'Miami': [12, 18, 'start'],
+  'Atlanta': [-12, 6, 'end'], 'San Francisco': [12, 6, 'start'], 'Orlando': [12, 4, 'start'],
+};
+const cityAt = (n) => { const c = M.us.cities.find(c => c.name === n); return [c.x, c.y]; };
+
+function mini(x, y, s) {
+  return `<g transform="translate(${x},${y}) scale(${s})" opacity=".95">
+    <circle r="44" fill="rgba(255,255,255,.75)"/>
+    <polygon points="0,-38 7,-7 38,0 7,7 0,38 -7,7 -38,0 -7,-7" fill="#2A1F3D"/>
+    <polygon points="0,-38 7,-7 0,0" fill="#E8503F"/>
+    <text class="lbl" x="0" y="-48" text-anchor="middle" font-size="22" fill="#E8503F" stroke-width="5">N</text>
+    <text class="lbl" x="52" y="7" text-anchor="middle" font-size="18" fill="#2A1F3D" stroke-width="5">E</text>
+    <text class="lbl" x="0" y="64" text-anchor="middle" font-size="18" fill="#2A1F3D" stroke-width="5">S</text>
+    <text class="lbl" x="-52" y="7" text-anchor="middle" font-size="18" fill="#2A1F3D" stroke-width="5">W</text></g>`;
+}
+
+// Map labels get bigger on narrow screens so they stay readable.
+let LS = 1;
+function labelScale() { LS = Math.min(1.8, Math.max(1, 640 / Math.max(1, $('stage').clientWidth))); }
+
+function usSVG(hl) {
+  const W = M.us.w + 120, H = M.us.h;
+  let s = `<svg class="map" viewBox="0 -10 ${W} ${H + 10}" preserveAspectRatio="xMidYMid meet">
+    <rect x="0" y="-10" width="${W}" height="${H + 10}" rx="18" fill="#BFE6FA"/>`;
+  for (const st of M.us.states) s += `<path d="${st.d}" fill="#FFF8E7" stroke="#8C9AAE" stroke-width="1.4" stroke-linejoin="round"/>`;
+  for (const st of M.us.states) if (st.area > 1800) s += `<text x="${st.lx}" y="${st.ly + 5}" text-anchor="middle" font-size="14" fill="#A8A0B8" font-family="Fredoka" font-weight="600">${st.id}</text>`;
+  s += `<g id="trip"></g>`;
+  for (const c of M.us.cities) {
+    const on = hl.includes(c.name), o = CITY_LBL[c.name] || [12, 6, 'start'];
+    const fs = (on ? 26 : 19) * LS;
+    s += `<g class="city" data-name="${c.name}">
+      <circle cx="${c.x}" cy="${c.y}" r="${on ? 10 : 6}" fill="${on ? '#E8503F' : '#2A1F3D'}" stroke="#fff" stroke-width="3"/>
+      <text class="lbl" x="${c.x + o[0] * (on ? 1.3 : 1) * LS}" y="${c.y + o[1] * (on ? 1.2 : 1) * LS}" text-anchor="${o[2]}" font-size="${fs}" fill="${on ? '#C0392B' : '#2A1F3D'}" stroke-width="6">${c.name}</text></g>`;
+  }
+  s += `<g id="marks"></g>` + mini(70, H - 80, 1.15) + '</svg>';
+  return s;
+}
+
+function worldSVG(hl, eqGlow) {
+  const W = M.world.w, H = M.world.h, L = M.world.land;
+  let s = `<svg class="map" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">
+    <defs><clipPath id="euClip"><rect x="0" y="0" width="${M.world.uralX}" height="${H}"/></clipPath>
+      <clipPath id="asClip"><rect x="${M.world.uralX}" y="0" width="${W}" height="${H}"/></clipPath>
+      <clipPath id="frame"><rect width="${W}" height="${H}" rx="14"/></clipPath>
+      <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#7CC8F0"/><stop offset="1" stop-color="#3E8FD0"/></linearGradient></defs>
+    <g clip-path="url(#frame)"><rect width="${W}" height="${H}" fill="url(#sea)"/>`;
+  for (const k of ['na', 'sa', 'eu', 'af', 'as', 'au', 'an'])
+    s += `<path d="${L[k]}" fill="${COLORS[k]}" stroke="#3B2F55" stroke-width=".8" stroke-linejoin="round"/>`;
+  s += `<path d="${L.ru}" fill="${COLORS.eu}" stroke="#3B2F55" stroke-width=".8" clip-path="url(#euClip)"/>`;
+  s += `<path d="${L.ru}" fill="${COLORS.as}" stroke="#3B2F55" stroke-width=".8" clip-path="url(#asClip)"/>`;
+  const ey = M.world.eqY;
+  s += `<line x1="0" y1="${ey}" x2="${W}" y2="${ey}" stroke="${eqGlow ? '#FFC23D' : '#1D2B4A'}" stroke-width="${eqGlow ? 5 : 2.5}" stroke-dasharray="${eqGlow ? '' : '10 6'}"/>
+    <text class="lbl" x="8" y="${ey - 7}" font-size="${(eqGlow ? 22 : 15) * LS}" fill="#1D2B4A" stroke-width="5">Equator</text>`;
+  s += `<g id="trip"></g>`;
+  for (const [name, p] of Object.entries(WPLACES)) {
+    const pts = p.alt ? [p.at, p.alt] : [p.at];
+    for (const a of pts) {
+      const on = hl.includes(name), fs = (on ? 21 : 14) * LS, words = name.split(' ');
+      const hw = Math.max(...words.map(w => w.length)) * fs * 0.32;
+      const x = Math.min(W - hw - 4, Math.max(hw + 4, wpt(...a)[0]));
+      const y = Math.max((words.length - 1) * fs * 0.5 + fs * 0.5,
+        Math.min(H - fs * words.length, wpt(...a)[1] - (on ? fs * 0.9 : 0)));            // lift above the dot, keep in frame
+      const fill = on ? '#C0392B' : (p.kind === 'sea' ? '#14365E' : '#2A1F3D');
+      s += `<text class="lbl" x="${x}" y="${y - (words.length - 1) * fs * 0.5 + fs * 0.35}" text-anchor="middle" font-size="${fs}" fill="${fill}" stroke-width="${on ? 6 : 4}">` +
+        words.map((w, i) => `<tspan x="${x}" dy="${i ? fs : 0}">${w}</tspan>`).join('') + '</text>';
+    }
+  }
+  s += `<g id="marks"></g>` + mini(52, H - 70, 0.85) + '</g></svg>';
+  return s;
+}
+
+function svgEl(tag, attrs) { const e = document.createElementNS(SVGNS, tag); for (const k in attrs) e.setAttribute(k, attrs[k]); return e; }
+
+function drawPins(a, b, scale) {
+  const g = $('marks'); g.innerHTML = '';
+  const s = scale || 1;
+  const start = svgEl('g', {});
+  start.appendChild(svgEl('circle', { cx: a[0], cy: a[1], r: 13 * s, fill: '#2FBF7A', stroke: '#fff', 'stroke-width': 4 * s, class: 'pulse' }));
+  g.appendChild(start);
+  if (b) {
+    const t = svgEl('text', { x: b[0], y: b[1] + 10 * s, 'text-anchor': 'middle', 'font-size': 30 * s, class: 'pulse' });
+    t.textContent = '⭐'; g.appendChild(t);
+  }
+}
+
+// Animated line + traveller from a to b. Resolves when done.
+function travel(a, b, emoji, color, scale) {
+  return new Promise((res) => {
+    const g = $('trip'); if (!g) return res();
+    const s = scale || 1;
+    const line = svgEl('line', { x1: a[0], y1: a[1], x2: a[0], y2: a[1], stroke: color, 'stroke-width': 6 * s, 'stroke-linecap': 'round', 'stroke-dasharray': `${14 * s} ${10 * s}` });
+    g.appendChild(line);
+    const t = svgEl('text', { 'text-anchor': 'middle', 'font-size': 34 * s }); t.textContent = emoji; g.appendChild(t);
+    const flip = b[0] < a[0];
+    const dur = 1300, t0 = performance.now();
+    sfx.whoosh();
+    (function step(now) {
+      const p = Math.min(1, (now - t0) / dur), e = p < .5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;
+      const x = a[0] + (b[0] - a[0]) * e, y = a[1] + (b[1] - a[1]) * e;
+      line.setAttribute('x2', x); line.setAttribute('y2', y);
+      t.setAttribute('transform', `translate(${x},${y + 11 * s})${flip ? ' scale(-1,1)' : ''}`);
+      if (p < 1) requestAnimationFrame(step);
+      else { arrowHead(g, a, b, color, s); res(); }
+    })(t0);
+  });
+}
+function arrowHead(g, a, b, color, s) {
+  const ang = Math.atan2(b[1] - a[1], b[0] - a[0]) * 180 / Math.PI;
+  g.appendChild(svgEl('polygon', { points: `0,0 ${-22 * s},${-12 * s} ${-22 * s},${12 * s}`, fill: color, transform: `translate(${b[0]},${b[1]}) rotate(${ang})` }));
+}
+function hintArrow(a, b) {
+  const g = $('trip'); if (!g || g.querySelector('.hint')) return;
+  const h = svgEl('g', { class: 'hint tapme' });
+  h.appendChild(svgEl('line', { x1: a[0], y1: a[1], x2: b[0], y2: b[1], stroke: '#fff', 'stroke-width': 5, 'stroke-dasharray': '6 9', 'stroke-linecap': 'round' }));
+  arrowHead(h, a, b, '#fff', 1);
+  g.appendChild(h);
+}
+
+/* ───────── round state ───────── */
+let mode = null, items = [], idx = 0, stars = 0, results = [], busy = false;
+
+function setPrompt(html) { $('prompt').innerHTML = html; }
+function setFeedback(html) { $('feedback').innerHTML = html; }
+function renderDots() {
+  $('dots').innerHTML = items.map((_, i) => `<div class="dot ${i === idx ? 'now' : results[i] === 2 ? 'good' : results[i] === 1 ? 'ok' : ''}"></div>`).join('');
+  $('stars').textContent = '⭐ ' + stars;
+}
+function roseSize() {
+  const portrait = innerWidth <= innerHeight;
+  return Math.round(portrait ? Math.min(innerWidth * 0.66, innerHeight * 0.34, 330) : Math.min(innerWidth * 0.3, innerHeight * 0.55, 340));
+}
+
+function startMode(m) {
+  audioOn(); mode = m; idx = 0; stars = 0; results = [];
+  if (m === 'compass') items = compassRound();
+  else if (m === 'us') items = usRound();
+  else items = worldRound();
+  show('game'); runItem();
+}
+function runItem() {
+  busy = false;
+  $('next').classList.add('hidden'); setFeedback('');
+  $('tray').classList.add('hidden'); $('rose').classList.remove('hidden');
+  renderDots();
+  const it = items[idx];
+  ({ place: runPlace, tapdir: runTapDir, which: runWhich, find: runFind, eq: runEq })[it.type](it);
+}
+function finishItem(firstTry) {
+  results[idx] = firstTry ? 2 : 1;
+  if (firstTry) stars++;
+  renderDots();
+  $('next').classList.remove('hidden');
+}
+$('next').addEventListener('click', () => {
+  sfx.tap(); idx++;
+  if (idx >= items.length) winScreen(); else runItem();
+});
+
+/* ───────── mode: build the compass ───────── */
+function compassRound() {
+  const taps = shuffle(ALL).slice(0, 6).map(k => ({ type: 'tapdir', k }));
+  return [{ type: 'place' }, ...taps];
+}
+
+let drag = null;
+function runPlace(it) {
+  setPrompt('Put each direction where it goes on the <span class="hl">compass rose</span>!');
+  const stage = $('stage');
+  stage.innerHTML = '<div class="rose" id="bigrose"></div>';
+  const size = Math.round(Math.min(stage.clientWidth, stage.clientHeight, 560) * 0.96);
+  const btns = buildRose($('bigrose'), Math.max(size, 220), (k) => trySlot(k));
+  for (const k of ALL) btns[k].classList.add('blank');
+  $('rose').classList.add('hidden');
+  const tray = $('tray'); tray.classList.remove('hidden'); tray.innerHTML = '';
+  let sel = null, placed = 0, misses = 0;
+  setFeedback('Tip: <b>N</b>ever <b>E</b>at <b>S</b>oggy <b>W</b>affles — go around clockwise from the top!');
+  for (const k of shuffle(ALL)) {
+    const c = document.createElement('div');
+    c.className = 'chip' + (DIRS[k].card ? ' card' : '');
+    c.innerHTML = k + '<small>' + DIRS[k].name + '</small>';
+    c.dataset.k = k;
+    c.addEventListener('pointerdown', (e) => {
+      e.preventDefault(); sfx.tap();
+      if (sel) sel.classList.remove('sel');
+      sel = c; c.classList.add('sel');
+      for (const b of Object.values(btns)) b.classList.remove('target');
+      startDrag(e, c);
+    }, { passive: false });
+    tray.appendChild(c);
+  }
+  function startDrag(e, c) {
+    const ghost = c.cloneNode(true); ghost.classList.add('dragghost'); ghost.classList.remove('sel');
+    document.body.appendChild(ghost);
+    drag = { c, ghost, x0: e.clientX, y0: e.clientY, moved: false };
+    const mv = (ev) => {
+      ghost.style.left = ev.clientX + 'px'; ghost.style.top = ev.clientY + 'px';
+      if (Math.hypot(ev.clientX - drag.x0, ev.clientY - drag.y0) > 10) { drag.moved = true; c.classList.add('drag'); }
+    };
+    mv(e);
+    const up = (ev) => {
+      window.removeEventListener('pointermove', mv); window.removeEventListener('pointerup', up); window.removeEventListener('pointercancel', up);
+      ghost.remove(); c.classList.remove('drag');
+      const was = drag; drag = null;
+      if (!was.moved) return;                         // a plain tap just selects the chip
+      const hit = document.elementsFromPoint(ev.clientX, ev.clientY).find(el => el.classList && el.classList.contains('rbtn'));
+      if (hit) trySlot(hit.dataset.k);
+    };
+    window.addEventListener('pointermove', mv, { passive: false });
+    window.addEventListener('pointerup', up); window.addEventListener('pointercancel', up);
+  }
+  function trySlot(slot) {
+    if (!sel || btns[slot].classList.contains('filled')) return;
+    const k = sel.dataset.k;
+    if (k === slot) {
+      sfx.good(); say(DIRS[k].name);
+      btns[slot].classList.remove('blank'); btns[slot].classList.add('filled');
+      sel.classList.add('used'); sel.classList.remove('sel'); sel = null; placed++;
+      setFeedback(`<span class="big">${DIRS[k].name}!</span>`);
+      if (placed === ALL.length) {
+        sfx.great();
+        setFeedback(`<span class="big">You built the whole compass! 🎉</span>${misses === 0 ? 'No mistakes!' : ''}`);
+        $('tray').classList.add('hidden');
+        finishItem(misses === 0);
+      }
+    } else {
+      misses++; sfx.nope();
+      btns[slot].classList.add('nope'); setTimeout(() => btns[slot].classList.remove('nope'), 450);
+      setFeedback(placeHint(k));
+    }
+  }
+}
+function placeHint(k) {
+  const d = DIRS[k];
+  if (d.card) return `Not there! <b>${d.name}</b> is ${{ N: 'at the top ⬆️', S: 'at the bottom ⬇️', E: 'on the right ➡️', W: 'on the left ⬅️' }[k]}`;
+  return `Not there! <b>${d.name}</b> is between <b>${DIRS[k[0]].name}</b> and <b>${DIRS[k[1]].name}</b>`;
+}
+
+function runTapDir(it) {
+  setPrompt(`Tap <span class="hl">${DIRS[it.k].name.toUpperCase()}</span> on the compass!`);
+  const stage = $('stage');
+  stage.innerHTML = '<div class="rose" id="bigrose"></div>';
+  const size = Math.round(Math.min(stage.clientWidth, stage.clientHeight, 560) * 0.96);
+  let misses = 0;
+  const btns = buildRose($('bigrose'), Math.max(size, 220), (k, b) => {
+    if (busy) return;
+    if (k === it.k) {
+      busy = true; sfx.good(); say(DIRS[k].name);
+      b.classList.remove('blank'); b.classList.add('filled', 'yes');
+      setFeedback(`<span class="big">Yes! ${DIRS[k].name}!</span>`);
+      finishItem(misses === 0);
+    } else {
+      misses++; sfx.nope();
+      b.classList.remove('blank'); b.classList.add('filled', 'nope');
+      setFeedback(`That one is <b>${DIRS[k].name}</b>. ${placeHint(it.k).replace('Not there! ', '')}`);
+    }
+  });
+  for (const k of ALL) btns[k].classList.add('blank');
+  $('rose').classList.add('hidden');
+  setFeedback('');
+}
+
+/* ───────── mode: US road trip ───────── */
+const WORKSHEET = [['Buffalo', 'Washington D.C.'], ['Orlando', 'Seattle'], ['Los Angeles', 'Buffalo'], ['Washington D.C.', 'Dallas']];
+function usPairs() {
+  const names = M.us.cities.map(c => c.name), out = [];
+  for (const a of names) for (const b of names) {
+    if (a === b) continue;
+    const A = cityAt(a), B = cityAt(b), c = classify(B[0] - A[0], B[1] - A[1]);
+    if (c) out.push({ from: a, to: b, ...c });
+  }
+  return out;
+}
+function usRound() {
+  const pairs = usPairs();
+  const ws = shuffle(WORKSHEET).slice(0, 3).map(([a, b]) => pairs.find(p => p.from === a && p.to === b));
+  const rest = shuffle(pairs.filter(p => !ws.includes(p)));
+  const which = [...ws, ...rest.slice(0, 3)].map(p => ({ type: 'which', map: 'us', ...p }));
+  // "find" questions: from a city, go a direction; any city that way counts.
+  const finds = [];
+  for (const p of shuffle(pairs)) {
+    if (finds.length >= 2) break;
+    if (finds.some(f => f.from === p.from || f.dir === p.ans)) continue;
+    finds.push({ type: 'find', from: p.from, dir: p.ans });
+  }
+  const rounds = shuffle([...which.slice(1), ...finds]);
+  return [which[0], ...rounds];
+}
+function usFindOk(from, to, dir) {
+  const A = cityAt(from), B = cityAt(to), dx = B[0] - A[0], dy = B[1] - A[1], off = offAxis(dx, dy);
+  if (DIRS[dir].card) return off <= 15 && nearestCard(dx, dy) === dir;
+  return off >= 10 && quadrant(dx, dy) === dir;
+}
+
+function verbFor(it) {
+  if (it.map === 'us') return pick(['drove', 'flew', 'traveled']);
+  return pick(['sailed', 'flew', 'traveled']);
+}
+const FAMILY = ['Sophia', 'Ethan', "Carrie's family", "Adam's family", "Jim's family", "Mary's family", 'Grandma', 'A puppy', 'A pirate'];
+
+function runWhich(it) {
+  const isUS = it.map === 'us';
+  labelScale();
+  $('stage').innerHTML = isUS ? usSVG([it.from, it.to]) : worldSVG([it.from, it.to]);
+  let A, B;
+  if (isUS) { A = cityAt(it.from); B = cityAt(it.to); }
+  else { [A, B] = worldTrip(it); }
+  const who = it.who || (it.who = pick(FAMILY));
+  const verb = it.verb || (it.verb = verbFor(it));
+  setPrompt(`${who} ${verb} from <span class="hl2">${it.from}</span> to <span class="hl">${it.to}</span>. Which direction?`);
+  const sc = isUS ? 1 : 0.8;
+  drawPins(A, B, sc);
+  let misses = 0;
+  const btns = buildRose($('rose'), roseSize(), (k, b) => {
+    if (busy || !it.set.includes(k)) return;
+    if (k === it.ans) {
+      busy = true; sfx.good(); say(DIRS[k].name);
+      b.classList.add('yes');
+      for (const o of it.set) if (o !== k) btns[o].classList.add('ghost');
+      const h = $('trip').querySelector('.hint'); if (h) h.remove();
+      const emoji = isUS ? (verb === 'flew' ? '✈️' : '🚗') : (WPLACES[it.to].kind === 'sea' || verb === 'sailed' ? '⛵' : '✈️');
+      travel(A, B, emoji, '#E8503F', sc).then(() => {
+        setFeedback(`<span class="big">${DIRS[k].name}!</span>${explain(k)}`);
+        finishItem(misses === 0);
+      });
+    } else {
+      misses++; sfx.nope();
+      b.classList.add('nope');
+      hintArrow(A, B);
+      setFeedback(misses === 1
+        ? 'Not quite! Follow the white arrow from the 🟢 to the ⭐. Is it going up, down, left or right?'
+        : moveHint(it.ans));
+    }
+  });
+  for (const k of ALL) if (!it.set.includes(k)) btns[k].classList.add('off');
+}
+
+function runFind(it) {
+  labelScale();
+  $('stage').innerHTML = usSVG([it.from]);
+  const A = cityAt(it.from);
+  setPrompt(`Start in <span class="hl2">${it.from}</span>. Go <span class="hl">${DIRS[it.dir].name.toUpperCase()}</span>! Tap a city that way.`);
+  drawPins(A, null, 1);
+  const btns = buildRose($('rose'), Math.round(roseSize() * 0.8), null);
+  for (const k of ALL) if (k !== it.dir) btns[k].classList.add('ghost'); else btns[k].classList.add('yes');
+  for (const c of document.querySelectorAll('#stage .city')) if (c.dataset.name !== it.from) c.classList.add('tapme');
+  let misses = 0;
+  const svg = $('stage').querySelector('svg');
+  svg.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    if (busy) return;
+    const pt = svg.createSVGPoint(); pt.x = e.clientX; pt.y = e.clientY;
+    const p = pt.matrixTransform(svg.getScreenCTM().inverse());
+    const unit = 1 / svg.getScreenCTM().a;               // SVG units per screen pixel
+    let best = null, bd = Infinity;
+    for (const c of M.us.cities) {
+      if (c.name === it.from) continue;
+      const d = Math.hypot(c.x - p.x, c.y - p.y); if (d < bd) { bd = d; best = c; }
+    }
+    if (!best || bd > Math.max(45, 40 * unit)) return;
+    const B = [best.x, best.y];
+    if (usFindOk(it.from, best.name, it.dir)) {
+      busy = true; sfx.good(); say(best.name + '!');
+      for (const c of document.querySelectorAll('#stage .city')) c.classList.remove('tapme');
+      $('trip').innerHTML = '';
+      travel(A, B, '🚗', '#E8503F', 1).then(() => {
+        setFeedback(`<span class="big">${best.name} is ${DIRS[it.dir].name} of ${it.from}!</span>${explain(it.dir)}`);
+        finishItem(misses === 0);
+      });
+    } else {
+      misses++; sfx.nope();
+      $('trip').innerHTML = '';
+      const g = $('trip');
+      g.appendChild(svgEl('line', { x1: A[0], y1: A[1], x2: B[0], y2: B[1], stroke: '#fff', 'stroke-width': 5, 'stroke-dasharray': '6 9', 'stroke-linecap': 'round' }));
+      arrowHead(g, A, B, '#fff', 1);
+      const d = nearest8(B[0] - A[0], B[1] - A[1]);
+      setFeedback(`Oops — <b>${best.name}</b> is <b>${DIRS[d].name}</b> of ${it.from}. Look for a city that is <b>${DIRS[it.dir].name}</b>!`);
+    }
+  }, { passive: false });
+}
+
+/* ───────── mode: world trip ───────── */
+function worldRound() {
+  const qs = shuffle(WORLD_Q).slice(0, 6).map(([from, to, ans, pts]) => ({
+    type: 'which', map: 'world', from, to, ans, pts: pts || {}, set: DIRS[ans].card ? CARD : INTER,
+  }));
+  const eqs = shuffle(EQ_Q).slice(0, 2).map(([place, ans]) => ({ type: 'eq', place, ans }));
+  return [qs[0], ...shuffle([...qs.slice(1), ...eqs])];
+}
+function runEq(it) {
+  labelScale();
+  $('stage').innerHTML = worldSVG([it.place], true);
+  const A = wplace(it.place, wpt(0, 20));
+  drawPins(A, null, 0.8);
+  setPrompt(`Is <span class="hl">${it.place}</span> NORTH or SOUTH of the <span class="hl2">Equator</span>?`);
+  let misses = 0;
+  const btns = buildRose($('rose'), roseSize(), (k, b) => {
+    if (busy || (k !== 'N' && k !== 'S')) return;
+    if (k === it.ans) {
+      busy = true; sfx.good(); say(DIRS[k].name);
+      b.classList.add('yes');
+      setFeedback(`<span class="big">${DIRS[k].name}!</span>${it.place} is ${k === 'N' ? 'above ⬆️' : 'below ⬇️'} the Equator line.`);
+      finishItem(misses === 0);
+    } else {
+      misses++; sfx.nope(); b.classList.add('nope');
+      setFeedback('Find the yellow Equator line. Is the green dot above it or below it?');
+    }
+  });
+  for (const k of ALL) if (k !== 'N' && k !== 'S') btns[k].classList.add('off');
+}
+
+/* ───────── win ───────── */
+function winScreen() {
+  setBest(mode, stars);
+  const total = items.length;
+  $('wtitle').textContent = stars === total ? 'Perfect! Compass Captain!' : stars >= total * 0.6 ? 'Great exploring!' : 'Nice trip, explorer!';
+  $('wbadge').textContent = { compass: '🧭', us: '🚗', world: '🌍' }[mode];
+  $('wstars').textContent = '⭐'.repeat(stars) + '  ' + stars + ' / ' + total;
+  show('win'); sfx.win(); confetti();
+}
+$('again').addEventListener('click', () => startMode(mode));
+$('menu').addEventListener('click', () => { showBests(); show('start'); });
+for (const b of document.querySelectorAll('.mode')) b.addEventListener('click', () => startMode(b.dataset.mode));
+
+function confetti() {
+  const cv = $('confetti'), cx = cv.getContext('2d');
+  cv.width = innerWidth; cv.height = innerHeight;
+  const cols = ['#FFC23D', '#FF6B5B', '#2FBF7A', '#8FD8FF', '#8D63F2', '#F59245'];
+  const ps = Array.from({ length: 160 }, () => ({ x: Math.random() * cv.width, y: -20 - Math.random() * cv.height * .5, vx: (Math.random() - .5) * 3, vy: 2 + Math.random() * 4, r: Math.random() * 6.28, s: 6 + Math.random() * 8, c: pick(cols) }));
+  const t0 = performance.now();
+  (function f(now) {
+    cx.clearRect(0, 0, cv.width, cv.height);
+    for (const p of ps) { p.x += p.vx; p.y += p.vy; p.r += .1; cx.save(); cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c; cx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2); cx.restore(); }
+    if (now - t0 < 4000 && $('win').classList.contains('on')) requestAnimationFrame(f); else cx.clearRect(0, 0, cv.width, cv.height);
+  })(t0);
+}
+
+// Re-render the current item if the screen rotates (rose and map sizes depend on it).
+let rz;
+addEventListener('resize', () => {
+  clearTimeout(rz);
+  rz = setTimeout(() => { if ($('game').classList.contains('on') && !busy && items[idx].type !== 'place' && $('next').classList.contains('hidden')) runItem(); }, 250);
+});
+showBests();
+</script>
+</body>
+</html>

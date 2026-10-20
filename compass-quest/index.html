@@ -413,8 +413,8 @@ const WPLACES = {
   'Africa':        { at: [6, 20],    kind: 'land', c: 'af' },
   'Asia':          { at: [50, 92],   kind: 'land', c: 'as' },
   'Australia':     { at: [-25, 134], kind: 'land', c: 'au' },
-  'Antarctica':    { at: [-73, 20],  kind: 'land', c: 'an', wide: true },
-  'Arctic Ocean':  { at: [79, 10],   kind: 'sea', wide: true },
+  'Antarctica':    { at: [-73, 62],  kind: 'land', c: 'an', wide: true },
+  'Arctic Ocean':  { at: [76, 52],   kind: 'sea', wide: true },
   'Atlantic Ocean':{ at: [22, -42],  kind: 'sea' },
   'Pacific Ocean': { at: [-5, -130], kind: 'sea', alt: [10, 168] },
   'Indian Ocean':  { at: [-15, 78],  kind: 'sea' },
@@ -521,6 +521,13 @@ function worldSVG(hl, eqGlow) {
   const ey = M.world.eqY;
   s += `<line x1="0" y1="${ey}" x2="${W}" y2="${ey}" stroke="${eqGlow ? '#FFC23D' : '#1D2B4A'}" stroke-width="${eqGlow ? 5 : 2.5}" stroke-dasharray="${eqGlow ? '' : '10 6'}"/>
     <text class="lbl" x="8" y="${ey - 7}" font-size="${(eqGlow ? 22 : 15) * LS}" fill="#1D2B4A" stroke-width="5">Equator</text>`;
+  // Pole markers (just labels — the poles sit off the top and bottom edges of this map).
+  const pf = 13 * LS;
+  s += `<g pointer-events="none">
+    <line x1="${W / 2}" y1="0" x2="${W / 2}" y2="${pf * 0.7}" stroke="#1D2B4A" stroke-width="3"/>
+    <text class="lbl" x="${W / 2}" y="${pf * 1.75}" text-anchor="middle" font-size="${pf}" fill="#1D2B4A" stroke-width="4">▲ North Pole</text>
+    <line x1="${W / 2}" y1="${H}" x2="${W / 2}" y2="${H - pf * 0.7}" stroke="#1D2B4A" stroke-width="3"/>
+    <text class="lbl" x="${W / 2}" y="${H - pf * 0.95}" text-anchor="middle" font-size="${pf}" fill="#1D2B4A" stroke-width="4">▼ South Pole</text></g>`;
   s += `<g id="trip"></g>`;
   for (const [name, p] of Object.entries(WPLACES)) {
     const pts = p.alt ? [p.at, p.alt] : [p.at];

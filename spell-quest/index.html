@@ -562,6 +562,7 @@
 <div id="toast"></div>
 
 <script src="sentences.js"></script>
+<script src="weekly.js"></script>
 <script>
 (() => {
 'use strict';
@@ -607,6 +608,17 @@ function load() {
   return defaults();
 }
 let S = load();
+// a list published in weekly.js is added once per device and becomes the active list
+(() => {
+  const w = window.SQ_WEEKLY;
+  if (!w || !w.id || typeof w.text !== 'string') return;
+  if (!Array.isArray(S.published)) S.published = [];
+  if (S.published.includes(w.id)) return;
+  const id = uid();
+  S.lists.push({ id, name: w.name || 'This week', text: w.text });
+  S.active = id; S.published.push(w.id);
+  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
+})();
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
 

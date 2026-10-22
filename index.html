@@ -118,33 +118,6 @@
     letter-spacing: 2px;
   }
 
-  /* ── GAME COUNT BAR ── */
-  .stats-bar {
-    display: flex;
-    justify-content: center;
-    gap: 40px;
-    margin: 30px auto 10px;
-    padding: 14px 30px;
-    max-width: 500px;
-    border-top: 1px solid var(--card-border);
-    border-bottom: 1px solid var(--card-border);
-  }
-  .stat {
-    text-align: center;
-  }
-  .stat-val {
-    font-family: 'Press Start 2P', monospace;
-    font-size: 1.3rem;
-    color: var(--neon-cyan);
-  }
-  .stat-label {
-    font-size: 0.7rem;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    letter-spacing: 2px;
-    margin-top: 4px;
-  }
-
   /* ── FEATURED SECTION ── */
   .featured-section {
     max-width: 1200px;
@@ -415,7 +388,6 @@
   /* ── RESPONSIVE ── */
   @media (max-width: 700px) {
     .games-grid { grid-template-columns: 1fr; padding: 0 16px 60px; }
-    .stats-bar { gap: 25px; }
     .header { padding: 40px 16px 30px; }
   }
 
@@ -435,20 +407,6 @@
   </div>
   <p class="tagline">Browser games created by<br><span class="name-sophia">Sophia</span> & <span class="name-ethan">Ethan</span></p>
 
-  <div class="stats-bar">
-    <div class="stat">
-      <div class="stat-val" id="game-count">5</div>
-      <div class="stat-label">Games</div>
-    </div>
-    <div class="stat">
-      <div class="stat-val">∞</div>
-      <div class="stat-label">Fun</div>
-    </div>
-    <div class="stat">
-      <div class="stat-val">0</div>
-      <div class="stat-label">Ads</div>
-    </div>
-  </div>
 </header>
 
 <!-- FEATURED GAMES -->
@@ -726,10 +684,5 @@
   Made with 🤖 + ❤️ — all games run in your browser, no installs needed
 </footer>
 
-<script>
-  // Update game count dynamically
-  document.getElementById('game-count').textContent =
-    document.querySelectorAll('#games-grid .game-card').length;
-</script>
 </body>
 </html>

@@ -125,8 +125,7 @@ are scratch, not artifacts.
    and `speechSynthesis` until a real tap. Every game with sound needs a start
    screen with a big PLAY button that calls `audioCtx.resume()`.
 7. **Add a tile to the root `index.html`** inside `<main class="games-grid">` —
-   copy an existing `<!-- ═══ GAME CARD: ... ═══ -->` block. The game count in
-   the stats bar is computed from `.game-card` count, so no manual edit needed.
+   copy an existing `<!-- ═══ GAME CARD: ... ═══ -->` block.
 
 ## Ages
 

@@ -149,8 +149,8 @@ in `spell-quest/classes.js` — nobody types them in on a device.
    `word: sentence` lines. Include review and challenge words.
 3. **Write the example sentences yourself** — Chris only sends the words. One
    short sentence per word (about 4–8 words), using the exact word, simple
-   enough for that grade, nothing scary. The game reads it aloud in Spell mode
-   so the kid knows which word is meant (e.g. `though: It was cold, though the
+   enough for that grade, nothing scary. Kids hear it via the 💬 Sentence
+   button (read automatically for sound-alikes like there/their) (e.g. `though: It was cold, though the
    sun was out.`).
 4. Never reuse or edit an `id` that has already been published — devices add
    each class/id once. Fix a typo by publishing a new id.

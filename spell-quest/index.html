@@ -103,6 +103,27 @@
   .sub { font-size: clamp(1.05rem, 4vw, 1.35rem); opacity: .9; margin-bottom: 18px; }
   @keyframes bob { 0%,100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-10px) rotate(4deg); } }
 
+  /* ── CLASSES ── */
+  #classes { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 16px 28px; }
+  .class-title { text-align: center; font-size: clamp(2rem, 8vw, 3rem); padding: 4px 56px 0; }
+  #classList { display: flex; flex-direction: column; gap: 18px; }
+  .school-name { font-family: 'Fredoka', sans-serif; font-weight: 700; font-size: 1.5rem; color: #fff; margin: 0 4px 8px; }
+  .class-row { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .class-btn {
+    background: var(--sand); border-radius: 22px; padding: 14px 8px; min-height: 128px;
+    box-shadow: 0 6px 0 rgba(0,0,0,.18); border: 4px solid transparent;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
+    font-family: 'Fredoka', sans-serif; font-weight: 700;
+  }
+  .class-btn .ico { font-size: 2.6rem; }
+  .class-btn .grade { font-size: 1.6rem; }
+  .class-btn small { font-family: 'Andika', sans-serif; font-weight: 400; font-size: .95rem; color: var(--soft); }
+  .class-btn.mine { border-color: var(--gold); }
+  .class-btn.empty { opacity: .6; }
+  .class-btn:active { transform: translateY(3px); box-shadow: 0 2px 0 rgba(0,0,0,.18); }
+  .classbtn { align-self: center; min-height: 48px; font-size: 1.1rem; }
+  .classbtn .swap { font-size: .85rem; opacity: .8; text-decoration: underline; }
+
   /* ── HOME ── */
   #home { overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 14px 16px 28px; }
   .home-wrap { width: 100%; max-width: 720px; display: flex; flex-direction: column; gap: 14px; }
@@ -415,6 +436,14 @@
   <button class="btn gold big" id="playBtn">▶ PLAY</button>
 </section>
 
+<!-- ═══ CLASSES ═══ -->
+<section id="classes" class="screen">
+  <div class="home-wrap">
+    <div class="title class-title">Pick your class</div>
+    <div id="classList"></div>
+  </div>
+</section>
+
 <!-- ═══ HOME ═══ -->
 <section id="home" class="screen">
   <div class="home-wrap">
@@ -429,6 +458,7 @@
       </div>
       <svg class="trail-svg" id="trailSvg" viewBox="0 0 340 120" aria-label="Treasure trail"></svg>
     </div>
+    <button class="btn ghost classbtn" id="classBtn"></button>
     <div class="listline" id="listLine"></div>
     <button class="quest-btn" id="questBtn">
       <span class="ico">🧭</span>
@@ -562,7 +592,7 @@
 <div id="toast"></div>
 
 <script src="sentences.js"></script>
-<script src="weekly.js"></script>
+<script src="classes.js"></script>
 <script>
 (() => {
 'use strict';
@@ -608,17 +638,14 @@ function load() {
   return defaults();
 }
 let S = load();
-// a list published in weekly.js is added once per device and becomes the active list
-(() => {
-  const w = window.SQ_WEEKLY;
-  if (!w || !w.id || typeof w.text !== 'string') return;
-  if (!Array.isArray(S.published)) S.published = [];
-  if (S.published.includes(w.id)) return;
-  const id = uid();
-  S.lists.push({ id, name: w.name || 'This week', text: w.text });
-  S.active = id; S.published.push(w.id);
-  try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {}
-})();
+// devices that loaded C-4 from the old weekly.js already have it — tie it to RSE grade 3
+if (Array.isArray(S.published) && S.published.includes('C-4')) {
+  S.published = S.published.map(k => k === 'C-4' ? 'rse-3/C-4' : k);
+  const l = S.lists.find(l => !l.pub && l.name === 'List C-4 · short o & long o');
+  if (l) l.pub = 'rse-3/C-4';
+  if (!S.classId) S.classId = 'rse-3';
+  save();
+}
 function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} }
 try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
 
@@ -905,6 +932,61 @@ function drawTrail(svg, pos) {
 function lootHTML() { return S.treasures.slice(-8).join('') || '<span style="font-size:.95rem;color:var(--soft)">no treasure yet</span>'; }
 
 // ════════════════════════════════════════════════
+//  CLASSES (classes.js)
+// ════════════════════════════════════════════════
+const CLASSES = Array.isArray(window.SQ_CLASSES) ? window.SQ_CLASSES : [];
+const classById = id => CLASSES.find(c => c.id === id);
+const latestList = c => (c && c.lists && c.lists[0]) || null;
+const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+function niceDate(ymd) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(ymd || '');
+  return m ? `${MONTHS[+m[2] - 1]} ${+m[3]}` : '';
+}
+function className(c) { return `${c.school} · Grade ${c.grade}`; }
+
+function renderClasses() {
+  const schools = [];
+  CLASSES.forEach(c => {
+    let g = schools.find(s => s.name === c.school);
+    if (!g) schools.push(g = { name: c.school, classes: [] });
+    g.classes.push(c);
+  });
+  $('classList').innerHTML = schools.map(g => `
+    <div class="school">
+      <div class="school-name">🏫 ${esc(g.name)}</div>
+      <div class="class-row">${g.classes.map(c => {
+        const l = latestList(c);
+        return `<button class="class-btn ${c.id === S.classId ? 'mine' : ''} ${l ? '' : 'empty'}" data-class="${esc(c.id)}">
+          <span class="ico">${c.emoji || '📚'}</span>
+          <span class="grade">Grade ${c.grade}</span>
+          <small>${l ? `New words ${esc(niceDate(l.date))}` : 'Words coming soon'}</small>
+        </button>`;
+      }).join('')}</div>
+    </div>`).join('');
+  show('classes');
+}
+
+// picking a class loads its newest list (added once per device, progress kept)
+function pickClass(id) {
+  const c = classById(id), l = latestList(c);
+  if (!c) return;
+  if (!l) { sfx.tap(); toast(`No words yet for ${className(c)} — coming soon!`); say('Words coming soon!'); return; }
+  const key = `${c.id}/${l.id}`;
+  if (!Array.isArray(S.published)) S.published = [];
+  let mine = S.lists.find(x => x.pub === key);
+  if (!mine && !S.published.includes(key)) {
+    mine = { id: uid(), name: l.name || 'This week', text: l.text.trim(), pub: key };
+    S.lists.push(mine);
+    S.published.push(key);
+  }
+  S.classId = c.id;
+  if (mine) S.active = mine.id;
+  save();
+  sfx.good();
+  renderHome();
+}
+
+// ════════════════════════════════════════════════
 //  HOME
 // ════════════════════════════════════════════════
 function renderHome() {
@@ -912,6 +994,8 @@ function renderHome() {
   drawTrail($('trailSvg'), S.trail);
   $('loot').innerHTML = lootHTML();
   const list = activeList(), n = words().length;
+  const c = classById(S.classId);
+  $('classBtn').innerHTML = c ? `🏫 ${esc(className(c))} <span class="swap">change</span>` : '🏫 Pick your class';
   $('listLine').innerHTML = n
     ? `This week: <b>${esc(list.name)}</b> · ${n} words`
     : 'No words yet — tap 📝 Spelling words below to add some!';
@@ -1530,8 +1614,13 @@ $('playBtn').addEventListener('click', () => {
   ensureAudio();
   if (hasTTS) { try { const u = utter('Spell Quest!', 1); speechSynthesis.speak(u); } catch (e) {} pickVoice(); }
   sfx.good();
-  renderHome();
+  renderClasses();
 });
+$('classList').addEventListener('click', e => {
+  const b = e.target.closest('[data-class]');
+  if (b) { ensureAudio(); pickClass(b.dataset.class); }
+});
+$('classBtn').addEventListener('click', () => { sfx.tap(); renderClasses(); });
 
 $('questBtn').addEventListener('click', () => { ensureAudio(); startRound('quest'); });
 document.querySelectorAll('.mode-btn').forEach(b => b.addEventListener('click', () => { ensureAudio(); startRound(b.dataset.mode); }));

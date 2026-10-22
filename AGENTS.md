@@ -135,6 +135,23 @@ instructions, no fail states that feel like punishment, big friendly targets,
 immediate audio/visual feedback, and a win screen that celebrates. Educational
 games should teach through play, not quizzing.
 
+## Spell Quest weekly words
+
+Chris sends a photo of a week's spelling list. Words are published from the repo
+in `spell-quest/classes.js` — nobody types them in on a device.
+
+1. **Ask which class the list belongs to** if Chris didn't say. Classes, in menu
+   order: RSE Grade 1, RSE Grade 3, Quogue Grade 1, Quogue Grade 3. A new
+   school or grade goes into `SQ_CLASSES` (RSE stays on top).
+2. Add the list to the **front** of that class's `lists` with a new unique `id`
+   (e.g. the sheet's list name, `C-5`), today's `date` (`YYYY-MM-DD`, shown on
+   the class menu as "New words Oct 21"), a `name`, and `text` as
+   `word: short kid-friendly sentence` lines that use the exact word.
+   Include review and challenge words.
+3. Never reuse or edit an `id` that has already been published — devices add
+   each class/id once. Fix a typo by publishing a new id.
+4. Test, push to `main`, and verify as usual.
+
 ## Dispatch workflow (how Chris uses this)
 
 Chris sends a game idea from his vault. The agent should:

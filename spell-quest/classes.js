@@ -40,7 +40,25 @@ octagon: A stop sign is an octagon.
   },
   {
     id: 'quogue-1', school: 'Quogue', grade: 1, emoji: '🐢',
-    lists: [],
+    lists: [
+      {
+        id: 'digraphs-ck', date: '2026-10-22', name: 'Consonant digraphs',
+        text: `
+back: I sit in the back seat.
+neck: A giraffe has a long neck.
+chick: The baby chick is yellow.
+witch: The witch has a big hat.
+quick: The bunny is very quick.
+shock: The cold water was a shock!
+rock: I sat on a big rock.
+luck: Good luck at your game!
+she: She has a red bike.
+he: He likes to run.
+for: This cake is for you.
+or: Do you want milk or juice?
+`,
+      },
+    ],
   },
   {
     id: 'quogue-3', school: 'Quogue', grade: 3, emoji: '🦈',

@@ -592,7 +592,8 @@
 <div id="toast"></div>
 
 <script src="sentences.js"></script>
-<script src="classes.js"></script>
+<!-- always fetch the latest word lists (GitHub Pages lets browsers cache files for 10 min) -->
+<script>document.write('<script src="classes.js?v=' + Date.now() + '"><\/script>');</script>
 <script>
 (() => {
 'use strict';

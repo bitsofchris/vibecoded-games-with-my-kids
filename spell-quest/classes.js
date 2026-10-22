@@ -44,6 +44,22 @@ octagon: A stop sign is an octagon.
   },
   {
     id: 'quogue-3', school: 'Quogue', grade: 3, emoji: '🦈',
-    lists: [],
+    lists: [
+      {
+        id: 'ow-sound', date: '2026-10-22', name: 'ow sound',
+        text: `
+however: I was tired, however I kept going.
+found: I found my lost shoe.
+surround: Trees surround our little house.
+mountain: We hiked up the mountain.
+allowance: I saved my allowance for a toy.
+flounder: A flounder is a flat fish.
+coward: The brave knight was no coward.
+lounge: Cats love to lounge in the sun.
+amount: Add a small amount of salt.
+around: The dog ran around the yard.
+`,
+      },
+    ],
   },
 ];

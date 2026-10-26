@@ -64,6 +64,21 @@ or: Do you want milk or juice?
     id: 'quogue-3', school: 'Quogue', grade: 3, emoji: '🦈',
     lists: [
       {
+        id: 'ing-ed-endings', date: '2026-10-26', name: '-ing and -ed endings',
+        text: `
+decorating: We are decorating the cake.
+celebrating: We are celebrating my birthday.
+erupted: The volcano erupted with red lava.
+encouraged: My coach encouraged me to try.
+exploding: Fireworks were exploding in the sky.
+traveling: We are traveling to see Grandma.
+clogging: Leaves are clogging the drain.
+studied: I studied my spelling words.
+dropped: I dropped my ice cream cone.
+treating: Mom is treating us to pizza.
+`,
+      },
+      {
         id: 'ow-sound', date: '2026-10-22', name: 'ow sound',
         text: `
 however: I was tired, however I kept going.

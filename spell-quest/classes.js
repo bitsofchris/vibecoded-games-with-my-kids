@@ -12,6 +12,31 @@ window.SQ_CLASSES = [
     id: 'rse-3', school: 'RSE', grade: 3, emoji: '🚀',
     lists: [
       {
+        id: 'C-5', date: '2026-10-26', name: 'List C-5 · oo & long u',
+        text: `
+fruit: I eat fruit for a snack.
+cute: The puppy is so cute.
+mule: The mule carried our bags.
+stool: I sat on a tall stool.
+few: I have a few crayons left.
+rules: We follow the rules in class.
+new: I got a new backpack.
+knew: She knew all the answers.
+bedroom: My bedroom has a blue rug.
+musical: We saw a musical with songs.
+rescue: The firefighter will rescue the cat.
+spoon: I eat soup with a spoon.
+computer: Dad typed on the computer.
+moon: The moon is bright tonight.
+perfume: Mom's perfume smells like roses.
+height: We marked my height on the wall.
+silent: The library is silent.
+reply: Please reply to my letter.
+barbecue: We had burgers at the barbecue.
+suitcase: I packed my suitcase for the trip.
+`,
+      },
+      {
         id: 'C-4', date: '2026-10-21', name: 'List C-4 · short o & long o',
         text: `
 coach: The coach blew her whistle.

@@ -89,6 +89,21 @@ or: Do you want milk or juice?
     id: 'quogue-3', school: 'Quogue', grade: 3, emoji: '🦈',
     lists: [
       {
+        id: 's-es-endings', date: '2026-11-01', name: '-s and -es endings',
+        text: `
+instructions: Read the instructions first.
+punctuations: Check the punctuations in your story.
+conversations: We had fun conversations at lunch.
+expectations: My teacher has high expectations.
+diagrams: The book has diagrams of plants.
+paragraphs: I wrote two paragraphs about my dog.
+summaries: We wrote summaries of the story.
+telephones: Old telephones had long cords.
+thoughts: Share your thoughts with the class.
+solutions: We found solutions to the puzzle.
+`,
+      },
+      {
         id: 'ing-ed-endings', date: '2026-10-26', name: '-ing and -ed endings',
         text: `
 decorating: We are decorating the cake.

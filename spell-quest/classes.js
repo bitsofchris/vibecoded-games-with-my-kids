@@ -67,6 +67,23 @@ octagon: A stop sign is an octagon.
     id: 'quogue-1', school: 'Quogue', grade: 1, emoji: '🐢',
     lists: [
       {
+        id: 'week-2-all', date: '2026-11-02', name: 'Week 2 · -all words',
+        text: `
+ball: I kick the red ball.
+wall: My picture is on the wall.
+fall: Leaves fall from the tree.
+small: The bug is very small.
+huff: The wolf will huff and puff.
+will: I will help you.
+toss: Toss me the ball!
+bus: I ride the bus to school.
+yes: Yes, I want a cookie!
+was: The cat was asleep.
+one: I have one dog.
+said: Mom said it is time for bed.
+`,
+      },
+      {
         id: 'digraphs-ck', date: '2026-10-22', name: 'Consonant digraphs',
         text: `
 back: I sit in the back seat.
